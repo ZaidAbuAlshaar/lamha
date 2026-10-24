@@ -124,6 +124,8 @@ def _start():
     p = _state["proc"]
     if p is not None and p.poll() is None and _state["loaded"]:
         return True
+    if time.time() < _state.get("next_try", 0):  # back off after a failed start (never block every request)
+        return False
     if not os.path.exists(_py()):
         _state.update(status="down", loaded=False, detail=f"chronos venv missing: {_py()}")
         return False
@@ -145,7 +147,8 @@ def _start():
         msg = {"ready": False, "error": f"start timeout/invalid: {e}"}
     if not msg.get("ready"):
         proc.kill()
-        _state.update(proc=None, status="down", loaded=False, detail=str(msg.get("error"))[:200])
+        _state.update(proc=None, status="down", loaded=False, detail=str(msg.get("error"))[:200],
+                      next_try=time.time() + 120)
         return False
     _state.update(proc=proc, q=q, model=msg.get("model"), loaded=True, status="ok",
                   load_ms=round((time.perf_counter() - t) * 1000), detail=f"{msg.get('model')} on CPU")
@@ -324,6 +327,7 @@ def _ollama_chat(facts: dict) -> str | None:
 
 
 _note_cache: dict[str, dict] = {}
+_llm_down_until = [0.0]
 
 
 def doctor_note(facts: dict, cache_key: str | None = None, chat=None) -> dict:
@@ -332,7 +336,10 @@ def doctor_note(facts: dict, cache_key: str | None = None, chat=None) -> dict:
     if key in _note_cache:
         return _note_cache[key]
     res = None
-    if os.environ.get("NAZRA_FORECAST_NOTE_AI", "1") != "0":
+    if time.time() < _llm_down_until[0]:  # Gemma failed recently: template now, retry after 60 s
+        res = {"text_ar": template_note(facts), "source": "template", "numbers_verified": True,
+               "reason": "llm_unavailable: backoff"}
+    elif os.environ.get("NAZRA_FORECAST_NOTE_AI", "1") != "0":
         try:
             text = (chat or _ollama_chat)(llm_view(facts))
             ok, why = guard(text, llm_view(facts))
@@ -346,6 +353,8 @@ def doctor_note(facts: dict, cache_key: str | None = None, chat=None) -> dict:
         except Exception as e:  # noqa: BLE001
             res = {"text_ar": template_note(facts), "source": "template", "numbers_verified": True,
                    "reason": f"llm_unavailable: {type(e).__name__}"}
+            if chat is None:
+                _llm_down_until[0] = time.time() + 60
     if res is None:
         res = {"text_ar": template_note(facts), "source": "template", "numbers_verified": True, "reason": "disabled"}
     if len(_note_cache) > 128:
