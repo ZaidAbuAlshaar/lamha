@@ -138,7 +138,12 @@ export class VitalsEngine {
       this.video.srcObject = stream;
       this.video.muted = true;
       this.video.playsInline = true;
-      await this.video.play();
+      try {
+        await this.video.play();
+      } catch (e) {
+        if (!(e instanceof DOMException && e.name === 'AbortError')) throw e; // a newer load replaced this one
+      }
+      if (this.stopped) return;
       this.running = true;
       this.loop();
     } catch (e) {
@@ -187,7 +192,7 @@ export class VitalsEngine {
     const now = performance.now();
     if (this.lastTick) this.fpsEst = this.fpsEst ? this.fpsEst * 0.9 + (1000 / (now - this.lastTick)) * 0.1 : 1000 / (now - this.lastTick);
     this.lastTick = now;
-    this.frames++;
+    if (this.startT != null) this.frames++; // face fraction counts only frames after the scan started
     this.process(now / 1000);
   };
 
@@ -224,7 +229,7 @@ export class VitalsEngine {
         }
       }
       if (n > 30) {
-        if (this.startT == null) this.startT = ts;
+        if (this.startT == null) { this.startT = ts; this.frames = 1; }
         this.faceFrames++;
         this.t.push(ts);
         this.R.push(sr / n); this.G.push(sg / n); this.B.push(sb / n);
@@ -323,9 +328,8 @@ export class VitalsEngine {
       for (let i = 0; i < lm.length; i += 3) {
         ctx.fillRect(ox + lm[i].x * dw - 1, oy + lm[i].y * dh - 1, 2 * dpr, 2 * dpr);
       }
-      // "Pulse made visible": ROIs glow with the live pulse wave.
-      const last = this.wave.length ? this.wave[this.wave.length - 1] : 0;
-      this.pulse = this.pulse * 0.5 + Math.max(0, last) * 0.5;
+      // ROIs glow at the estimated heart rate (a rhythm display driven by the live estimate, not beat-by-beat detection).
+      this.pulse = this.liveHr ? Math.max(0, Math.cos((2 * Math.PI * this.liveHr * performance.now()) / 60000)) ** 3 : 0;
       const k = dw / this.proc.width;
       for (const roi of this.lastRois) {
         ctx.beginPath();

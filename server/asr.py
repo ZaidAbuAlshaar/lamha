@@ -26,8 +26,8 @@ def _cuda_dll_dirs():
 _cuda_dll_dirs()
 
 MODEL_NAME = "faster-whisper-large-v3"
-INITIAL_PROMPT = ("بوجعني راسي، ضيق نفس، سخونة، دوخة، وجع بصدري، كحة، تعبان، نفسي ضيق، "
-                  "رجليّ منفخات، السكري عالي، ضغطي، ما بقدر أنام، قلقان، بستفرغ، إسهال، وجع بطن")
+# Neutral vocabulary only: Whisper can echo its prompt on silent/noisy audio, so no red-flag phrases here.
+INITIAL_PROMPT = "كحة، سخونة، دوخة، تعبان، راسي، بطني، رجلي، السكري، الضغط، من مبارح، من أسبوع"
 
 state = {"ready": False, "model": MODEL_NAME, "device": None, "compute_type": None, "error": None}
 _model = None
@@ -69,5 +69,9 @@ def transcribe(path: str) -> dict:
         segs, info = _model.transcribe(path, language="ar", vad_filter=True, beam_size=5,
                                        initial_prompt=INITIAL_PROMPT, condition_on_previous_text=False)
         text = " ".join(s.text.strip() for s in segs).strip()
+    import re
+    key = lambda x: re.sub(r"[\W_]+", "", x)
+    if text and key(text) in key(INITIAL_PROMPT):
+        text = ""  # Whisper echoed its prompt on silence; that is not the patient speaking
     return {"text": text, "duration_s": round(float(info.duration), 2), "language": info.language,
             "processing_ms": int((time.perf_counter() - t0) * 1000), "model": MODEL_NAME}

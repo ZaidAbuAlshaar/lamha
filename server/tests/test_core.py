@@ -249,3 +249,39 @@ def test_stress_trend_never_changes_triage():
     level, reasons_ar, _ = rule_triage(vitals, [], alerts, [], "")
     assert level == "followup"
     assert any("تجريبي" in r for r in reasons_ar)
+
+
+def _level(txt, vitals=None):
+    from core import lexicon_scan, rule_triage
+    flags, syms, _, _ = lexicon_scan(txt)
+    v = vitals or {"hr_bpm": 75, "hr_confidence": 0.9, "rr_bpm": 15, "rr_confidence": 0.9, "quality": "good"}
+    return rule_triage(v, flags, [], syms, txt)[0], flags
+
+
+def test_review_false_emergencies_fixed():
+    for txt in ["بدي اموت من التعب", "بدي اموت من الضحك", "ما في وجع بصدري بس راسي بيوجعني",
+                "وجع راسي بس صدري منيح", "عندي ضغط وحساسية صدر"]:
+        lvl, flags = _level(txt)
+        assert lvl != "emergency", (txt, flags)
+
+
+def test_review_true_emergencies_kept():
+    for txt in ["بدي اموت", "عندي ضغط على صدري", "صدري بيوجعني من الصبح", "ما بقدر اتنفس"]:
+        lvl, _ = _level(txt)
+        assert lvl == "emergency", txt
+
+
+def test_sugar_ignores_years_and_ages():
+    from core import sugar_rule
+    assert sugar_rule("عندي سكري من 10 سنين")[0] == "followup"
+    assert sugar_rule("ابني عنده سكري نوع 1 وعمره 12")[0] == "followup"
+    assert sugar_rule("السكري كان 320 الصبح")[0] == "appointment"
+    assert sugar_rule("فحصت السكر طلع 55")[0] == "appointment"
+
+
+def test_camera_only_emergency_needs_clean_reading():
+    from core import vitals_rules
+    sure = {"hr_bpm": 140, "hr_confidence": 0.8, "rr_bpm": 15, "rr_confidence": 0.8, "quality": "good"}
+    unsure = {"hr_bpm": 140, "hr_confidence": 0.55, "rr_bpm": 15, "rr_confidence": 0.8, "quality": "fair"}
+    assert vitals_rules(sure)[0] == "emergency"
+    assert vitals_rules(unsure)[0] == "appointment"

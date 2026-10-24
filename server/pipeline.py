@@ -138,6 +138,9 @@ def analyze(patient: dict, vitals: dict, transcript: str, transcript_source: str
         summary_ar, summary_en, advice_ar = t_ar, t_en, t_adv
         error = (res or {}).get("error") if res else None
 
+    if final == "followup" and (vitals or {}).get("quality") == "poor":
+        advice_ar = core.POOR_SCAN_ADVICE  # never tell a patient "all good" when nothing was measured
+
     if llm_fn is None:
         ai = {"ok": True, "model": "template (seed)" if simulated else "template", "summary_ar": summary_ar,
               "summary_en": summary_en, "advice_ar": advice_ar, "numbers_verified": True, "latency_ms": 0,

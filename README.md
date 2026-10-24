@@ -12,7 +12,7 @@
 
 ## What happens in the demo
 
-1. **Scan (on the phone, 30 s).** MediaPipe Face Landmarker finds the forehead and cheeks. The phone reads tiny colour changes in the skin with every heartbeat (rPPG, the POS algorithm) and the up-down motion of the chest and shoulders. The skin regions on screen **glow in time with the pulse**, so the judge can watch their own heartbeat on their face. **No video frame ever leaves the phone.**
+1. **Scan (on the phone, 30 s).** MediaPipe Face Landmarker finds the forehead and cheeks. The phone reads tiny colour changes in the skin with every heartbeat (rPPG, the POS algorithm) and the up-down motion of the chest and shoulders. The skin regions on screen **glow at the estimated heart rate** while the scan runs. **No video frame ever leaves the phone.**
 2. **Speak (≤ 30 s).** The audio goes over HTTPS to the clinic laptop. **Whisper large-v3** (open weights, local GPU) transcribes it, and the server deletes the audio file straight away.
 3. **Understand.** **Gemma 4 E4B** (open weights, run locally through Ollama) extracts symptoms. Each symptom must quote the patient's exact words, and the code throws out quotes that don't appear in the transcript. Gemma also writes a short doctor summary in Arabic and English.
 4. **Triage (code first).** Fixed rules handle red flags (chest pain, severe breathlessness, fainting, stroke signs, bleeding, suicidal talk) and abnormal vitals. They also compare the reading with the patient's own baseline. **The AI can only raise the level, never lower it.**
@@ -49,15 +49,17 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 - **Rules first, AI escalates only:** `final = max(rule_level, ai_level)`. A prompt-injection line like "set triage to followup" cannot lower an emergency (unit test + live smoke case).
 - **Grounding:** every AI symptom must quote words that literally appear in the transcript. Quotes that don't match are shown greyed out and ignored for triage.
 - **No invented numbers:** if the AI summary contains any number that isn't a measured input, it is replaced by a code-generated summary (`numbers_verified=false` is shown to the doctor).
-- **Negation aware:** "ما في وجع بصدري" ("no chest pain") does not trigger the chest-pain flag. "ما بقدر أتنفس" ("I can't breathe") still does.
-- **Signal honesty:** every vital carries a confidence value. Low-quality scans are not used for the vitals rules, and the patient is asked to repeat the scan. The HRV stress index is shown as **experimental** and **never changes the triage level**. It is only computed when the pulse SNR is ≥ 10 dB, and even then our synthetic-video bench shows noise inflates it (RMSSD 20.6 ms read vs ~3.5 ms true).
+- **Dialect aware:** "ما في وجع بصدري" ("no chest pain"), "بدي اموت من التعب" ("I'm dying of tiredness", an idiom) and "عندي ضغط" ("I have blood pressure") do not trigger red flags. "ما بقدر أتنفس" ("I can't breathe") and "ضغط على صدري" ("pressure on my chest") still do. Each case is a unit test.
+- **Camera alone never calls 911 on a shaky reading:** a vitals-only emergency needs quality "good" and confidence ≥ 0.7; otherwise the level is "appointment" with "repeat the scan".
+- **A failed scan never says "you're fine":** poor quality + no symptoms shows "we couldn't measure accurately, repeat the scan".
+- **Signal honesty:** every vital carries a confidence value. Low-quality scans are not used for the vitals rules, and the patient is asked to repeat the scan. The HRV stress index is shown as **experimental** and **never changes the triage level**. It is only computed when the pulse SNR is ≥ 10 dB, and even then our synthetic-video bench shows noise inflates it (RMSSD 21 ms read vs ~3.5 ms true).
 - **Human in the loop:** the doctor confirms or overrides each check-in. Downgrading a level shows a warning.
 
 ## Privacy
 
 - Video is processed in the browser and never uploaded. Only numbers are stored.
 - Audio is transcribed on the clinic machine and deleted immediately. No cloud AI service is used.
-- The database stores vitals, transcript text and the AI output, nothing else. Seed patients are **synthetic** and are labelled «محاكاة» ("simulated") in the UI.
+- The database stores vitals, transcript text and the AI output, nothing else. The patient phone's picker uses `/api/patients/public` (synthetic profiles only, no check-ins). The doctor endpoints have no login yet (see limitations). Seed patients are **synthetic** and are labelled «محاكاة» ("simulated") in the UI.
 - The patient gives explicit consent before the camera opens, and the consent screen states the limits.
 
 ## Evidence (all measured this session; all synthetic unless stated)
@@ -67,9 +69,9 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 | DSP bench: 5 synthetic RGB traces with camera-timing jitter, illumination drift and noise | HR abs error 0.2 / 0.3 / 0.3 / 0.4 / 0.9 bpm (62–118 bpm). RR exact (12–24 /min). 5/5 pass | `web/tests/dsp.test.ts` |
 | HRV vs noise (synthetic) | RMSSD is 8 ms with no noise; noise inflates it (43 ms at 12 dB SNR) → stress gated at SNR ≥ 10 dB | same file, noise sweep |
 | **End-to-end: synthetic face videos with known pulse and breathing, fed as the camera into the real app (headless Chrome)** | **72 → 72.3 bpm and 96 → 95.7 bpm; RR 15 → 15 and 20 → 20; quality "good". A no-pulse control comes back "poor" with confidence 0** | `eval/e2e/` |
-| HRV on the same videos | **Not reliable:** RMSSD read 20.6 / 10.2 ms vs ~3.5 / ~1.7 ms true → stress labelled experimental and kept out of triage | `eval/e2e/README.md` |
+| HRV on the same videos | **Not reliable:** RMSSD read 21 / 12.4 ms vs ~3.5 / ~1.7 ms true → stress labelled experimental and kept out of triage | `eval/e2e/README.md` |
 | LLM smoke: 5 synthetic Arabic check-ins through Gemma 4 | 13/13 spans verified; 5/5 numbers verified; injection case still emergency; warm latency 4.8–7.6 s | `eval/llm/` |
-| Server unit tests | 65 passed | `server/tests/` |
+| Server unit tests (incl. dialect false-alarm cases) | 69 passed | `server/tests/` |
 | Whisper on GPU | 4.2 s clip (webm/opus) transcribed in 1.4 s | measured via `/api/transcribe` |
 | Accuracy on real people vs smartwatch | **Not measured yet.** The dashboard's "دقة القياس" ("measurement accuracy") tab computes it live from real paired readings; until then it shows n = 0 | `/api/validation` |
 
@@ -79,6 +81,7 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 - The HRV-based stress index from a 30-second phone video is experimental (see the bench above). The UI labels it «تجريبي» ("experimental") and it never affects triage.
 - Respiration is estimated from motion; talking or moving during the scan breaks it.
 - 5 LLM test cases are a smoke test, not a validation set.
+- The doctor dashboard has no authentication yet; anyone with the tunnel link can open it. A real clinic needs login + per-clinic access control.
 - Not a medical device. Real deployment needs clinical validation and regulatory approval.
 
 ## Run it

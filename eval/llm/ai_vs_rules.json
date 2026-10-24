@@ -1,0 +1,86 @@
+{
+ "label": "Simulated dev cases",
+ "model": "gemma4:e4b-it-qat",
+ "rows": [
+  {
+   "transcript": "حاسس صدري تقيل من الصبح",
+   "rules_only_level": "followup",
+   "final_level": "emergency",
+   "ai_level": "followup",
+   "ai_ok": true,
+   "symptoms": [
+    [
+     "chest_pain",
+     "حاسس صدري تقيل",
+     true
+    ]
+   ],
+   "red_flags": [
+    "chest_pain"
+   ],
+   "seconds": 19.8
+  },
+  {
+   "transcript": "صدري مقبوض وعم بعرق كثير",
+   "rules_only_level": "followup",
+   "final_level": "emergency",
+   "ai_level": "followup",
+   "ai_ok": true,
+   "symptoms": [
+    [
+     "chest_pain",
+     "صدري مقبوض",
+     true
+    ],
+    [
+     "other",
+     "عم بعرق كثير",
+     true
+    ]
+   ],
+   "red_flags": [
+    "chest_pain"
+   ],
+   "seconds": 6.7
+  },
+  {
+   "transcript": "قلبي عم يدق بسرعة وحاسس حالي رح يغمى علي",
+   "rules_only_level": "emergency",
+   "final_level": "emergency",
+   "ai_level": "emergency",
+   "ai_ok": true,
+   "symptoms": [
+    [
+     "palpitations",
+     "قلبي عم يدق بسرعة",
+     true
+    ],
+    [
+     "syncope",
+     "حاسس حالي رح يغمى علي",
+     true
+    ]
+   ],
+   "red_flags": [
+    "syncope"
+   ],
+   "seconds": 6.2
+  },
+  {
+   "transcript": "راسي بيوجعني شوي من قلة النوم",
+   "rules_only_level": "followup",
+   "final_level": "followup",
+   "ai_level": "followup",
+   "ai_ok": true,
+   "symptoms": [
+    [
+     "headache",
+     "راسي بيوجعني",
+     true
+    ]
+   ],
+   "red_flags": [],
+   "seconds": 4.3
+  }
+ ]
+}

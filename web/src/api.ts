@@ -108,6 +108,7 @@ const json = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'a
 export const api = {
   health: () => fetch('/api/health').then(j<Health>),
   patients: () => fetch('/api/patients').then(j<PatientSummary[]>),
+  publicPatients: () => fetch('/api/patients/public').then(j<Patient[]>),
   patient: (id: string) => fetch(`/api/patients/${id}`).then(j<PatientDetail>),
   createPatient: (p: { name_ar: string; age?: number | null; sex?: 'm' | 'f' | null; location_ar?: string }) =>
     fetch('/api/patients', json(p)).then(j<Patient>),

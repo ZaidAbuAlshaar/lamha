@@ -102,6 +102,13 @@ def transcribe(audio: UploadFile = File(...)):
             pass
 
 
+@app.get("/api/patients/public")
+def patients_public():
+    """For the patient phone's picker: synthetic demo profiles only, no check-ins, transcripts or vitals."""
+    keep = ("id", "name_ar", "name_en", "age", "sex", "location_ar", "location_en", "conditions_ar", "conditions_en", "simulated")
+    return [{k: p.get(k) for k in keep} for p in store.list_patients() if p.get("simulated")]
+
+
 @app.get("/api/patients")
 def patients():
     out = []

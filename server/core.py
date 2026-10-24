@@ -71,12 +71,15 @@ def _p(pattern: str):
     return re.compile(normalize(pattern))
 
 
-_PAIN = r"(وجع|(?<![^\s])[وب]?الم(?![^\s])|الالم|ضغط|ثقل|تقل|نغز)"
+# Bare «ضغط» usually means blood pressure in Jordanian Arabic, so only «ضغط على/ب…» counts as chest pressure.
+_PAIN = r"(وجع|(?<![^\s])[وب]?الم(?![^\s])|الالم|ضغط على|ضغط ب|ثقل|تقل|نغز)"
+# Gap between pain word and chest that may not cross a clause («بس», «لكن», comma).
+_GAP = r"(?:(?!بس|لكن)[^.؟?!،,]){0,15}"
 RED_FLAG_DEFS = [
     {
         "code": "chest_pain", "label_ar": "ألم في الصدر", "label_en": "Chest pain",
         "symptom": ("chest_pain", "ألم في الصدر", "Chest pain"),
-        "patterns": [_p(_PAIN + r"[^.؟?!]{0,15}صدر"), _p(r"صدر[^.؟?!]{0,15}" + _PAIN)],
+        "patterns": [_p(_PAIN + _GAP + r"صدر"), _p(r"صدر" + _GAP + _PAIN)],
     },
     {
         "code": "severe_dyspnea", "label_ar": "ضيق نفس شديد", "label_en": "Severe shortness of breath",
@@ -123,7 +126,7 @@ RED_FLAG_DEFS = [
         "patterns": [
             _p(r"(انتحر|انتحار)"),
             _p(r"(اموت|اقتل|اذي|أذي)\s?(حالي|نفسي)"),
-            _p(r"(بدي|نفسي|بتمنى|بفكر)\s?اموت"),
+            _p(r"(بدي|نفسي|بتمنى|بفكر)\s?اموت(?!\s?من\s)"),  # not «بدي اموت من التعب/الضحك»
         ],
     },
 ]
@@ -223,10 +226,20 @@ def vitals_rules(v: dict):
         if LEVEL_RANK[lv] > LEVEL_RANK[level]:
             level = lv
 
+    # A camera-only reading may raise "emergency" only when it is clean and confident; otherwise it asks for a repeat.
+    def extreme(metric):
+        sure = v.get("quality") == "good" and (_f(v.get(f"{metric}_confidence")) or 0.0) >= 0.7
+        if sure:
+            bump("emergency")
+        else:
+            bump("appointment")
+            ra.append("قراءة غير مؤكدة — أعد الفحص")
+            re_.append("Unconfirmed reading — repeat the scan")
+
     if vitals_usable(v, "hr"):
         hr = _f(v["hr_bpm"])
         if hr >= 130 or hr <= 40:
-            bump("emergency")
+            extreme("hr")
             ra.append(f"النبض {hr:.0f} ن/د — خارج الحدود الآمنة")
             re_.append(f"Heart rate {hr:.0f} bpm — outside safe range")
         elif 110 <= hr < 130 or 40 < hr < 50:
@@ -236,7 +249,7 @@ def vitals_rules(v: dict):
     if vitals_usable(v, "rr"):
         rr = _f(v["rr_bpm"])
         if rr >= 30 or rr <= 7:
-            bump("emergency")
+            extreme("rr")
             ra.append(f"التنفس {rr:.0f}/د — خارج الحدود الآمنة")
             re_.append(f"Respiration {rr:.0f}/min — outside safe range")
         elif 24 <= rr < 30:
@@ -330,7 +343,7 @@ def rule_triage(vitals: dict, red_flags: list, alerts: list, symptoms: list, tra
             re_.append("Call 911 now")
     for a in alerts:
         if a["metric"] == "stress":
-            # HRV from a 30 s phone video is not reliable enough (synthetic-video bench: RMSSD 20.6 ms read vs
+            # HRV from a 30 s phone video is not reliable enough (synthetic-video bench: RMSSD 21 ms read vs
             # ~3.5 ms true), so the stress trend is shown to the doctor but never changes the triage level.
             ra.append(a["label_ar"] + " (تجريبي، لا يؤثر على الفرز)")
             re_.append(a["label_en"] + " (experimental, does not affect triage)")
@@ -347,7 +360,7 @@ def rule_triage(vitals: dict, red_flags: list, alerts: list, symptoms: list, tra
 
 
 # ---------------------------------------------------------------- self-reported glucose
-_SUGAR = re.compile(r"(سكر|السكري|سكري|glucose|sugar)[^.؟?!]{0,30}?(\d{2,3})")
+_SUGAR = re.compile(r"(سكر|السكري|سكري|glucose|sugar)[^.؟?!]{0,30}?(?<!\d)(\d{2,3})(?!\d)(?!\s?(سنه|سنين|سنوات|سني|شهر|اشهر|يوم|ايام|نوع))")
 
 
 def sugar_rule(transcript: str):
@@ -356,6 +369,8 @@ def sugar_rule(transcript: str):
     if not m:
         return "followup", [], []
     val = int(m.group(2))
+    if val < 40:  # not a plausible glucose value (age, type, duration…)
+        return "followup", [], []
     if val >= 250:
         return "appointment", [f"السكر المذكور من المريض {val} — مرتفع"], [f"Patient-reported glucose {val} — high"]
     if val <= 70:
@@ -454,6 +469,9 @@ def template_summary(vitals: dict, symptoms: list, red_flags: list, alerts: list
         ar += f" تنبيه: {a['label_ar']}."
         en += f" Alert: {a['label_en']}."
     return ar, en
+
+
+POOR_SCAN_ADVICE = "ما قدرنا نقيس بدقة هالمرة. أعد الفحص قدّام ضو أقوى وأنت ثابت، وإذا عندك أعراض راجع المركز الصحي."
 
 
 def template_advice(level: str, red_flags: list) -> str:

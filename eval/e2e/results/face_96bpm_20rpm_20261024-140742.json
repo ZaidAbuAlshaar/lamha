@@ -1,0 +1,561 @@
+{
+  "kind": "SYNTHETIC bench test - validates the signal-processing pipeline against a known injected pulse/breathing rate; NOT clinical accuracy on real people",
+  "when": "2026-10-24T14:08:14.793Z",
+  "url": "http://127.0.0.1:8787/#/scan-test?seconds=30",
+  "video": "E:\\nazra-e2e\\face_96bpm_20rpm.y4m",
+  "mode": "headless (new)",
+  "chrome": "Chrome/155.0.8059.85",
+  "outcome": "done",
+  "elapsed_s": 31.2,
+  "earlier_failed_attempts": null,
+  "attempts_total": 1,
+  "truth": {
+    "bpm": 96,
+    "bpm_realised_mean": 95.981,
+    "rpm": 20,
+    "seconds": 45,
+    "fps": 30,
+    "seed": 2,
+    "amplitudes": {
+      "R": 0.6,
+      "G": 1.4,
+      "B": 0.8
+    }
+  },
+  "measured": {
+    "hr_bpm": 95.7,
+    "hr_confidence": 1,
+    "hr_snr_db": 18.4,
+    "rr_bpm": 20,
+    "rr_confidence": 1,
+    "hrv_rmssd_ms": 12.4,
+    "hrv_sdnn_ms": 10.9,
+    "stress_index": 91,
+    "stress_level": "high",
+    "quality": "good",
+    "scan_seconds": 30,
+    "fps": 39.7,
+    "face_fraction": 1,
+    "bvp_preview": [
+      0.678,
+      0.469,
+      0.243,
+      0.012,
+      -0.219,
+      -0.447,
+      -0.661,
+      -0.835,
+      -0.935,
+      -0.936,
+      -0.82,
+      -0.583,
+      -0.24,
+      0.158,
+      0.536,
+      0.825,
+      0.985,
+      1,
+      0.882,
+      0.668,
+      0.408,
+      0.142,
+      -0.111,
+      -0.348,
+      -0.572,
+      -0.77,
+      -0.902,
+      -0.922,
+      -0.802,
+      -0.551,
+      -0.212,
+      0.151,
+      0.473,
+      0.703,
+      0.816,
+      0.815,
+      0.724,
+      0.577,
+      0.402,
+      0.215,
+      0.018,
+      -0.192,
+      -0.414,
+      -0.628,
+      -0.802,
+      -0.894,
+      -0.869,
+      -0.71,
+      -0.432,
+      -0.08,
+      0.284,
+      0.591,
+      0.788,
+      0.854,
+      0.803,
+      0.666,
+      0.478,
+      0.27,
+      0.063,
+      -0.128,
+      -0.297,
+      -0.447,
+      -0.575,
+      -0.665,
+      -0.69,
+      -0.626,
+      -0.465,
+      -0.221,
+      0.07,
+      0.356,
+      0.576,
+      0.687,
+      0.681,
+      0.581,
+      0.433,
+      0.282,
+      0.146,
+      0.015,
+      -0.129,
+      -0.293,
+      -0.463,
+      -0.609,
+      -0.692,
+      -0.681,
+      -0.568,
+      -0.368,
+      -0.112,
+      0.158,
+      0.401,
+      0.575,
+      0.659,
+      0.647,
+      0.552,
+      0.403,
+      0.237,
+      0.079,
+      -0.065,
+      -0.205,
+      -0.344,
+      -0.478,
+      -0.583,
+      -0.628,
+      -0.583,
+      -0.445,
+      -0.234,
+      0.015,
+      0.266,
+      0.483,
+      0.625,
+      0.672,
+      0.629,
+      0.527,
+      0.395,
+      0.254,
+      0.109,
+      -0.045,
+      -0.215,
+      -0.394,
+      -0.566,
+      -0.706,
+      -0.781,
+      -0.756,
+      -0.608,
+      -0.339,
+      0.009,
+      0.363,
+      0.646,
+      0.81,
+      0.839,
+      0.753,
+      0.596,
+      0.41,
+      0.22,
+      0.035,
+      -0.146,
+      -0.325,
+      -0.501,
+      -0.663,
+      -0.782,
+      -0.821,
+      -0.752,
+      -0.567,
+      -0.288,
+      0.038,
+      0.351,
+      0.597,
+      0.739,
+      0.768,
+      0.701,
+      0.572,
+      0.416,
+      0.257,
+      0.103,
+      -0.052,
+      -0.21,
+      -0.368,
+      -0.512,
+      -0.619,
+      -0.662,
+      -0.619,
+      -0.485,
+      -0.272,
+      -0.015,
+      0.234,
+      0.426,
+      0.526,
+      0.53,
+      0.457,
+      0.345,
+      0.224,
+      0.112,
+      0.016,
+      -0.065,
+      -0.137,
+      -0.204,
+      -0.265,
+      -0.305,
+      -0.312,
+      -0.278,
+      -0.209,
+      -0.111,
+      0.002,
+      0.108,
+      0.188,
+      0.229,
+      0.231,
+      0.201,
+      0.153,
+      0.1,
+      0.051,
+      0.009,
+      -0.024,
+      -0.05,
+      -0.067,
+      -0.074,
+      -0.072,
+      -0.062,
+      -0.045,
+      -0.025,
+      -0.002
+    ]
+  },
+  "app_error": null,
+  "comparison": {
+    "hr": {
+      "truth_nominal_bpm": 96,
+      "truth_realised_mean_bpm": 95.981,
+      "truth_first_scan_window_mean_bpm_approx": 96.06,
+      "measured_bpm": 95.7,
+      "abs_error_vs_nominal": 0.3,
+      "abs_error_vs_realised_mean": 0.28,
+      "tolerance_bpm": 3,
+      "confidence": 1,
+      "pass": true
+    },
+    "rr": {
+      "truth_nominal_rpm": 20,
+      "measured_rpm": 20,
+      "abs_error": 0,
+      "tolerance_rpm": 3,
+      "confidence": 1,
+      "pass": true
+    },
+    "hrv_info": {
+      "truth_rmssd_ms": 1.68,
+      "truth_sdnn_ms": 6.64,
+      "measured_rmssd_ms": 12.4,
+      "measured_sdnn_ms": 10.9,
+      "stress_index": 91,
+      "note": "informational, NOT validated: truth reflects only the injected slow drift"
+    }
+  },
+  "pass": true,
+  "control": false,
+  "console_errors": [],
+  "console_info_ignored": [
+    "INFO: Created TensorFlow Lite XNNPACK delegate for CPU."
+  ],
+  "screenshot": "C:\\Users\\mzaid\\مسابقة الحسين التقنية\\.claude\\worktrees\\remote-health-check-mobile-bf0dfa\\nazra\\eval\\e2e\\results\\face_96bpm_20rpm_20261024-140742.png",
+  "progress_trace": [
+    {
+      "t": 0,
+      "status": null,
+      "progress": null
+    },
+    {
+      "t": 0.55,
+      "status": "loading",
+      "progress": 0
+    },
+    {
+      "t": 1.22,
+      "status": "running",
+      "progress": 0.08975333333313465
+    },
+    {
+      "t": 4.03,
+      "status": "running",
+      "progress": 0.108043333333234
+    },
+    {
+      "t": 4.54,
+      "status": "running",
+      "progress": 0.12576333333328366
+    },
+    {
+      "t": 5.07,
+      "status": "running",
+      "progress": 0.14347999999995034
+    },
+    {
+      "t": 5.6,
+      "status": "running",
+      "progress": 0.16068333333333334
+    },
+    {
+      "t": 6.13,
+      "status": "running",
+      "progress": 0.17807333333318434
+    },
+    {
+      "t": 6.64,
+      "status": "running",
+      "progress": 0.19548333333333331
+    },
+    {
+      "t": 7.16,
+      "status": "running",
+      "progress": 0.21278333333333332
+    },
+    {
+      "t": 7.68,
+      "status": "running",
+      "progress": 0.23010333333313465
+    },
+    {
+      "t": 8.2,
+      "status": "running",
+      "progress": 0.24746333333328369
+    },
+    {
+      "t": 8.73,
+      "status": "running",
+      "progress": 0.26495
+    },
+    {
+      "t": 9.25,
+      "status": "running",
+      "progress": 0.28263333333333335
+    },
+    {
+      "t": 9.78,
+      "status": "running",
+      "progress": 0.299986666666468
+    },
+    {
+      "t": 10.31,
+      "status": "running",
+      "progress": 0.3176133333332837
+    },
+    {
+      "t": 10.84,
+      "status": "running",
+      "progress": 0.33495
+    },
+    {
+      "t": 11.36,
+      "status": "running",
+      "progress": 0.3526199999998013
+    },
+    {
+      "t": 11.89,
+      "status": "running",
+      "progress": 0.37005666666651765
+    },
+    {
+      "t": 12.4,
+      "status": "running",
+      "progress": 0.3873599999999007
+    },
+    {
+      "t": 12.92,
+      "status": "running",
+      "progress": 0.4043599999999007
+    },
+    {
+      "t": 13.43,
+      "status": "running",
+      "progress": 0.421793333333234
+    },
+    {
+      "t": 13.96,
+      "status": "running",
+      "progress": 0.4395133333332837
+    },
+    {
+      "t": 14.49,
+      "status": "running",
+      "progress": 0.4568099999999007
+    },
+    {
+      "t": 15.01,
+      "status": "running",
+      "progress": 0.4738766666665673
+    },
+    {
+      "t": 15.54,
+      "status": "running",
+      "progress": 0.49181333333328364
+    },
+    {
+      "t": 16.07,
+      "status": "running",
+      "progress": 0.5096333333333333
+    },
+    {
+      "t": 16.6,
+      "status": "running",
+      "progress": 0.5273
+    },
+    {
+      "t": 17.13,
+      "status": "running",
+      "progress": 0.5446733333331844
+    },
+    {
+      "t": 17.64,
+      "status": "running",
+      "progress": 0.5623266666665673
+    },
+    {
+      "t": 18.17,
+      "status": "running",
+      "progress": 0.579896666666617
+    },
+    {
+      "t": 18.7,
+      "status": "running",
+      "progress": 0.5970266666665672
+    },
+    {
+      "t": 19.21,
+      "status": "running",
+      "progress": 0.6143366666664679
+    },
+    {
+      "t": 19.73,
+      "status": "running",
+      "progress": 0.6318199999998012
+    },
+    {
+      "t": 20.25,
+      "status": "running",
+      "progress": 0.649036666666468
+    },
+    {
+      "t": 20.76,
+      "status": "running",
+      "progress": 0.6664033333331346
+    },
+    {
+      "t": 21.29,
+      "status": "running",
+      "progress": 0.684046666666617
+    },
+    {
+      "t": 21.82,
+      "status": "running",
+      "progress": 0.7016633333332837
+    },
+    {
+      "t": 22.35,
+      "status": "running",
+      "progress": 0.7187666666666667
+    },
+    {
+      "t": 22.86,
+      "status": "running",
+      "progress": 0.7359399999998509
+    },
+    {
+      "t": 23.38,
+      "status": "running",
+      "progress": 0.7529266666665673
+    },
+    {
+      "t": 23.89,
+      "status": "running",
+      "progress": 0.7706133333332836
+    },
+    {
+      "t": 24.42,
+      "status": "running",
+      "progress": 0.7880799999999504
+    },
+    {
+      "t": 24.93,
+      "status": "running",
+      "progress": 0.804893333333234
+    },
+    {
+      "t": 25.45,
+      "status": "running",
+      "progress": 0.8220899999998509
+    },
+    {
+      "t": 25.96,
+      "status": "running",
+      "progress": 0.8396399999998511
+    },
+    {
+      "t": 26.49,
+      "status": "running",
+      "progress": 0.8572299999999503
+    },
+    {
+      "t": 27.02,
+      "status": "running",
+      "progress": 0.8750299999999503
+    },
+    {
+      "t": 27.55,
+      "status": "running",
+      "progress": 0.8925
+    },
+    {
+      "t": 28.07,
+      "status": "running",
+      "progress": 0.909686666666468
+    },
+    {
+      "t": 28.59,
+      "status": "running",
+      "progress": 0.9270633333332836
+    },
+    {
+      "t": 29.11,
+      "status": "running",
+      "progress": 0.9439833333333333
+    },
+    {
+      "t": 29.62,
+      "status": "running",
+      "progress": 0.9616133333332837
+    },
+    {
+      "t": 30.15,
+      "status": "running",
+      "progress": 0.9792066666665176
+    },
+    {
+      "t": 30.68,
+      "status": "running",
+      "progress": 0.9969766666665673
+    },
+    {
+      "t": 31.21,
+      "status": "done",
+      "progress": 1
+    }
+  ]
+}

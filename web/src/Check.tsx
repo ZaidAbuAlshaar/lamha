@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, LEVEL, type Checkin, type Patient, type PatientSummary, type Vitals } from './api';
+import { api, LEVEL, type Checkin, type Patient, type Vitals } from './api';
 import { Brand, Conf, confLabel, STRESS_AR, Wave } from './components';
 import { VitalsEngine, loadLandmarker, type LiveUpdate, type VitalsResult } from './vitals/engine';
 
@@ -103,12 +103,12 @@ function Home({ onStart }: { onStart: () => void }) {
 }
 
 function Who({ onPick }: { onPick: (p: Patient) => void }) {
-  const [list, setList] = useState<PatientSummary[] | null>(null);
+  const [list, setList] = useState<Patient[] | null>(null);
   const [err, setErr] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { api.patients().then(setList).catch((e) => setErr(String(e.message ?? e))); }, []);
+  useEffect(() => { api.publicPatients().then(setList).catch((e) => setErr(String(e.message ?? e))); }, []);
   const create = async () => {
     setBusy(true);
     try {
@@ -155,7 +155,7 @@ function Consent({ onOk }: { onOk: () => void }) {
       <h2>قبل ما نبلّش — خصوصيتك</h2>
       <div className="card consent">
         <ul>
-          <li><b style={{ color: 'var(--text)' }}>الفيديو ما بيطلع من موبايلك.</b> الحساب كله بيصير على جهازك، وبيتخزن بس الأرقام (النبض، التنفس، التوتر).</li>
+          <li><b style={{ color: 'var(--text)' }}>الفيديو ما بيطلع من موبايلك.</b> الحساب كله بيصير على جهازك. اللي بيتخزن: الأرقام (النبض، التنفس، التوتر)، ونص كلامك، والملخص.</li>
           <li><b style={{ color: 'var(--text)' }}>صوتك</b> بيروح مشفّر لخادم العيادة، بيتحوّل لنص، وبينحذف فوراً. ما في أي خدمة ذكاء اصطناعي سحابية — الموديلات مفتوحة وشغّالة على جهاز العيادة.</li>
           <li><b style={{ color: 'var(--text)' }}>هاي أداة فرز مش تشخيص.</b> القرار النهائي للطبيب. إذا حاسس بخطر هلّق، اتصل 911.</li>
           <li>القراءة بتتأثر بالضو والحركة. إذا الثقة منخفضة رح نطلب منك تعيد.</li>
@@ -195,7 +195,11 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
       }
     });
     eng.start().catch(() => undefined);
-    return () => eng.stop();
+    // Keep the screen awake: iOS Low Power Mode auto-locks after 30 s, which would freeze the scan.
+    let lock: { release: () => Promise<void> } | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } };
+    nav.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => undefined);
+    return () => { eng.stop(); lock?.release().catch(() => undefined); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seconds]);
   const remaining = Math.max(0, Math.ceil(seconds - (u?.elapsed ?? 0)));
@@ -236,7 +240,7 @@ function Scan({ seconds, onDone }: { seconds: number; onDone: (v: VitalsResult) 
   return (
     <div className="screen" style={{ gap: 12 }}>
       <CameraScan seconds={seconds} onDone={onDone} />
-      <p className="muted" style={{ fontSize: 14, textAlign: 'center' }}>المربعات الخضرا هي مناطق الجلد اللي بنقرأ منها النبض — بتلمع مع كل نبضة. المستطيل الأصفر بيلقط حركة التنفس.</p>
+      <p className="muted" style={{ fontSize: 14, textAlign: 'center' }}>المربعات الخضرا هي مناطق الجلد اللي بنقرأ منها النبض — بتلمع على إيقاع النبض المقدَّر. المستطيل الأصفر بيلقط حركة التنفس.</p>
     </div>
   );
 }
@@ -305,13 +309,15 @@ function Voice({ onSend }: { onSend: (t: string, src: Checkin['transcript_source
 
   const start = async () => {
     setErr('');
+    // iOS only lets an AudioContext run if it is created inside the tap, before any await.
+    const ac = new AudioContext();
+    ac.resume().catch(() => undefined);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       const mime = pickMime();
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       const chunks: Blob[] = [];
       mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-      const ac = new AudioContext();
       const an = ac.createAnalyser();
       an.fftSize = 512;
       ac.createMediaStreamSource(stream).connect(an);
@@ -344,10 +350,11 @@ function Voice({ onSend }: { onSend: (t: string, src: Checkin['transcript_source
           setMode('type');
         }
       };
-      mr.start(250);
+      mr.start();
       rec.current = mr;
       setMode('rec');
     } catch (e) {
+      ac.close().catch(() => undefined);
       setErr(`ما قدرنا نفتح المايك: ${e instanceof Error ? e.message : e}`);
       setMode('type');
     }
@@ -434,7 +441,7 @@ function Result({ c, onAgain }: { c: Checkin; onAgain: () => void }) {
       <div className={`triage ${L.cls}`}>
         <span className="muted" style={{ fontSize: 13 }}>النتيجة</span>
         <span className={`big ${L.cls}`}>{L.ar}</span>
-        <p style={{ fontSize: 18 }}>{L.patient}</p>
+        <p style={{ fontSize: 18 }}>{c.vitals.quality === 'poor' && c.triage.level === 'followup' ? 'ما قدرنا نقيس بدقة هالمرة — أعد الفحص بضو أقوى' : L.patient}</p>
         {c.ai.advice_ar && <p className="muted">{c.ai.advice_ar}</p>}
         {c.triage.level === 'emergency' && <a className="btn danger block" href="tel:911" style={{ textDecoration: 'none', marginTop: 6 }}>اتصل 911</a>}
       </div>
