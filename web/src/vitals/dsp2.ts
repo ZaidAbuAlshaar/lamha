@@ -240,9 +240,13 @@ export function qualityScore(c: QualityComponents): number {
   return Math.round(s * 100) / 100;
 }
 
-export function qualityLevel(score: number, c: QualityComponents): 'good' | 'fair' | 'poor' {
-  if (score >= 0.65 && c.snr >= 0.4) return 'good';
-  if (score >= 0.45 && c.snr >= 0.2) return 'fair';
+/**
+ * `consistency` (raw window peaks agreeing with the final HR) is a hard gate: algorithm agreement alone is not
+ * evidence, because POS/CHROM/GREEN read the same pixels. A no-pulse control video passed without this gate.
+ */
+export function qualityLevel(score: number, c: QualityComponents, consistency = 1): 'good' | 'fair' | 'poor' {
+  if (score >= 0.65 && c.snr >= 0.4 && consistency >= 0.6) return 'good';
+  if (score >= 0.45 && c.snr >= 0.2 && consistency >= 0.4) return 'fair';
   return 'poor';
 }
 
@@ -281,6 +285,8 @@ export interface Analysis {
   beatWave: Float64Array;
   rmssd: number | null;
   sdnn: number | null;
+  /** Share of valid windows whose strongest raw (untracked) fused peak is within ±6 bpm of the final HR. */
+  consistency: number;
 }
 
 /** Full analysis of one (already uniformly resampled) segment. */
@@ -293,7 +299,7 @@ export function analyze(inp: AnalysisInput, snrGood = -1): Analysis {
   }
   const empty: Analysis = {
     hr: null, snrDb: -99, windows: [], goodWindowFrac: 0, perAlgoHr: {}, perAlgoSnr: {}, algoSpreadBpm: 99,
-    fusedBvp: new Float64Array(0), beatWave: new Float64Array(0), rmssd: null, sdnn: null,
+    fusedBvp: new Float64Array(0), beatWave: new Float64Array(0), rmssd: null, sdnn: null, consistency: 0,
   };
   if (!traces.length || traces[0].x.length < inp.fs * 10) return empty;
   const wins = slidingWindows(traces, inp.valid, inp.fs);
@@ -370,9 +376,12 @@ export function analyze(inp: AnalysisInput, snrGood = -1): Analysis {
       rmssd = v.rmssd; sdnn = v.sdnn;
     }
   }
+  // Raw peaks are taken BEFORE tracking: tracking enforces continuity and would make noise look stable.
+  const raw = wins.filter((w) => w.valid && w.cands.length).map((w) => w.cands[0].f * 60);
+  const consistency = hr != null && raw.length ? raw.filter((x) => Math.abs(x - hr) <= 6).length / raw.length : 0;
   return {
     hr, snrDb, windows: wins, goodWindowFrac: wins.length ? good.length / wins.length : 0,
-    perAlgoHr, perAlgoSnr, algoSpreadBpm, fusedBvp, beatWave, rmssd, sdnn,
+    perAlgoHr, perAlgoSnr, algoSpreadBpm, fusedBvp, beatWave, rmssd, sdnn, consistency,
   };
 }
 

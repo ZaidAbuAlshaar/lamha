@@ -551,8 +551,9 @@ export class HardenedEngine {
       clippedPct: sum.clipped_pct_mean ?? 0, faceWidthPct: this.mode === 'finger' ? null : sum.face_width_pct_mean,
     });
     const score = qualityScore(comp);
-    const quality = qualityLevel(score, comp);
+    const quality = qualityLevel(score, comp, a.consistency);
     const reasons = qualityReasons(comp, { brightness: sum.brightness_mean ?? 0, backlightRatio: sum.backlight_ratio });
+    if (a.consistency < 0.6 && !reasons.includes('unstable_hr')) reasons.push('unstable_hr');
     let rr: { rpm: number | null; snrDb: number } = { rpm: null, snrDb: -99 };
     if (headY && chestMv) {
       const c1 = estimateRr(chestMv.subarray(seg[0], seg[1])), c2 = estimateRr(headY.subarray(seg[0], seg[1]));
@@ -595,7 +596,7 @@ export class HardenedEngine {
       diagnostics: {
         ...baseDiag, algos: algos.join('+'), per_algo_hr: a.perAlgoHr, per_algo_snr_db: a.perAlgoSnr,
         algo_spread_bpm: round1(a.algoSpreadBpm), fused_snr_db: round1(a.snrDb), good_window_frac: round1(a.goodWindowFrac * 100)! / 100,
-        windows: a.windows.length, invalid_frames_pct: round1(invalidPct), extended: this.extending,
+        windows: a.windows.length, peak_consistency: round1(a.consistency * 100)! / 100, invalid_frames_pct: round1(invalidPct), extended: this.extending,
         segment_s: [Math.round(seg[0] / FS), Math.round(seg[1] / FS)], quality_score: score, quality_components: comp,
         quality_decision: quality, quality_reasons: reasons, final_hr_bpm: round1(a.hr), rr_snr_db: round1(rr.snrDb),
         flags: Object.entries(this.f).filter(([, v]) => v).map(([k]) => k).join(','),

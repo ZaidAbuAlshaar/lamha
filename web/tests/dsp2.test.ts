@@ -56,8 +56,25 @@ for (const [ci, c] of CONDS.entries()) {
     const eB = Math.abs(base - c.bpm), eH = Math.abs((a.hr ?? 0) - c.bpm);
     const ok = eH <= 3;
     if (!ok) fails++;
-    console.log(`${ok ? 'PASS' : 'FAIL'} ${c.name.padEnd(26)} seed ${seed} truth ${c.bpm} | baseline ${base.toFixed(1)} (err ${eB.toFixed(1)}) | hardened ${a.hr?.toFixed(1)} (err ${eH.toFixed(1)}) snr ${a.snrDb.toFixed(1)} dB spread ${a.algoSpreadBpm.toFixed(1)} | score ${score} ${qualityLevel(score, comp)}`);
+    console.log(`${ok ? 'PASS' : 'FAIL'} ${c.name.padEnd(26)} seed ${seed} truth ${c.bpm} | baseline ${base.toFixed(1)} (err ${eB.toFixed(1)}) | hardened ${a.hr?.toFixed(1)} (err ${eH.toFixed(1)}) snr ${a.snrDb.toFixed(1)} dB spread ${a.algoSpreadBpm.toFixed(1)} | score ${score} ${qualityLevel(score, comp, a.consistency)} cons ${a.consistency.toFixed(2)}`);
   }
+}
+// Noise-only control: no pulse at all must never come out 'good'.
+for (const seed of [11, 12, 13]) {
+  const r = rng(seed);
+  const t: number[] = [], rois = [0, 1, 2].map(() => ({ R: [] as number[], G: [] as number[], B: [] as number[] }));
+  for (let tt = 0; tt < 30; tt += 1 / 30) {
+    t.push(tt);
+    rois.forEach((roi) => { roi.R.push(150 + 0.6 * gauss(r)); roi.G.push(110 + 0.6 * gauss(r)); roi.B.push(90 + 0.6 * gauss(r)); });
+  }
+  const res = rois.map((roi) => resampleUniform(t, [roi.R, roi.G, roi.B], FS));
+  const vm = new Float64Array(res[0][0].length).fill(1);
+  const a = analyze({ fs: FS, rois: res.map(([R, G, B], k) => ({ name: `roi${k}`, r: R, g: G, b: B })), valid: vm, algos: ['POS', 'CHROM', 'GREEN'], bgSubtract: false });
+  const comp = qualityComponents({ snrDb: a.snrDb, algoSpreadBpm: a.algoSpreadBpm, goodWindowFrac: a.goodWindowFrac, invalidPct: 0, fps: 30, jitterMs: 3, brightness: 120, clippedPct: 0, faceWidthPct: 40 });
+  const lvl = qualityLevel(qualityScore(comp), comp, a.consistency);
+  const ok = lvl !== 'good';
+  if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'} noise-only control seed ${seed} -> hr ${a.hr?.toFixed(1)} snr ${a.snrDb.toFixed(1)} cons ${a.consistency.toFixed(2)} => ${lvl}`);
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS');
 process.exit(fails ? 1 : 0);
