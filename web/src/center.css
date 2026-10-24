@@ -87,5 +87,8 @@
 .cc-pick-btn { display: block; text-decoration: none; color: var(--text); background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 22px; font-size: 26px; font-weight: 700; }
 .cc-pick-btn:hover { border-color: var(--brand, var(--hr)); }
 .cc-foot { margin-top: auto; text-align: center; color: var(--dim); font-size: 14px; }
+.cc-card-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); align-items: start; }
+.cc-info, .cc-act { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 900px) { .cc-card-body { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .cc-row { grid-template-columns: 1fr 1fr; } }
 @media (prefers-reduced-motion: reduce) { .cc-alarm, .es-pulse { animation: none; } .cc-alarm .cc-card { border-width: 6px; } }

@@ -224,16 +224,22 @@ function Console({ me }: { me: CenterInfo }) {
                   <span className="cc-step">المحاولة {myStep || a.step}/{a.max_steps}{myStep > 1 ? ' · محوّلة من مركز ما ردّ' : ''}</span>
                   <span className="cc-since">من {since(a.created_at, now)}</span>
                 </div>
-                <h2 className="cc-name">{a.patient_name_ar}{a.age ? <small> · {a.age} سنة</small> : null}</h2>
-                <ul className="cc-reasons">{a.reasons_ar.map((r, i) => <li key={i}>{r}</li>)}</ul>
-                <div className="cc-vitals">
-                  <div><span>نبض</span><b className="cc-hr">{a.vitals.hr != null ? Math.round(a.vitals.hr) : '--'}</b><em>{QUALITY[a.vitals.quality ?? ''] ?? ''}</em></div>
-                  <div><span>تنفس</span><b className="cc-rr">{a.vitals.rr != null ? Math.round(a.vitals.rr) : '--'}</b><em>بالدقيقة</em></div>
+                <div className="cc-card-body">
+                  <div className="cc-info">
+                    <h2 className="cc-name">{a.patient_name_ar}{a.age ? <small> · {a.age} سنة</small> : null}</h2>
+                    <ul className="cc-reasons">{a.reasons_ar.slice(0, 5).map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    <p className="cc-where">📍 {a.area_ar}{mine ? ` · تقريباً ${mine.distance_km} كم عن المركز` : ''}</p>
+                    <p className="cc-note">مؤشر للمتابعة، مش تشخيص · الأرقام من كاميرا الموبايل</p>
+                  </div>
+                  <div className="cc-act">
+                    <div className="cc-vitals">
+                      <div><span>نبض</span><b className="cc-hr">{a.vitals.hr != null ? Math.round(a.vitals.hr) : '--'}</b><em>{QUALITY[a.vitals.quality ?? ''] ?? ''}</em></div>
+                      <div><span>تنفس</span><b className="cc-rr">{a.vitals.rr != null ? Math.round(a.vitals.rr) : '--'}</b><em>بالدقيقة</em></div>
+                    </div>
+                    <button className="cc-ack" disabled={busy === a.id} onClick={() => ack(a.id)}>{busy === a.id ? '…' : 'استلمنا'}</button>
+                    {left != null && <p className="cc-muted">{(myStep || a.step) >= a.max_steps ? `آخر مركز — إذا ما استلمتوا خلال ${left} ث رح نطلب من المريض يتصل 911` : `إذا ما استلمتوا، الحالة بتتحوّل للمركز التالي خلال ${left} ث`}</p>}
+                  </div>
                 </div>
-                <p className="cc-where">📍 {a.area_ar}{mine ? ` · تقريباً ${mine.distance_km} كم عن المركز` : ''}</p>
-                <p className="cc-note">مؤشر للمتابعة، مش تشخيص · الأرقام من كاميرا الموبايل</p>
-                <button className="cc-ack" disabled={busy === a.id} onClick={() => ack(a.id)}>{busy === a.id ? '…' : 'استلمنا'}</button>
-                {left != null && <p className="cc-muted">{(myStep || a.step) >= a.max_steps ? `آخر مركز — إذا ما استلمتوا خلال ${left} ث رح نطلب من المريض يتصل 911` : `إذا ما استلمتوا، الحالة بتتحوّل للمركز التالي خلال ${left} ث`}</p>}
               </article>
             );
           })}
