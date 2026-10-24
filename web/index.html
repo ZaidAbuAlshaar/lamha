@@ -3,14 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#060908" />
-    <meta name="description" content="نظرة — فحص صحي عن بعد بكاميرا الموبايل: نبض، تنفس، توتر، وأعراض بالعامية، وملخص للطبيب." />
+    <meta name="theme-color" content="#F8F6F3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C1816" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="نظرة: فحص صحي عن بعد بكاميرا الموبايل: نبض، تنفس، وأعراض بالعامية، وملخص للطبيب." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" sizes="180x180" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="نظرة" />
     <title>نظرة · Nazra</title>
+    <script>
+      // Apply the stored theme before first paint (key shared with src/brand/theme.ts).
+      try {
+        var t = localStorage.getItem('nazra-theme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.setAttribute('content', t === 'dark' ? '#1C1816' : '#F8F6F3'); });
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      /* initial splash, replaced when React mounts into #root */
+      html, body { margin: 0; background: #F8F6F3; }
+      .nz-splash { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 14px; font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; color: #221C19; }
+      .nz-splash img { width: 96px; height: 96px; }
+      .nz-splash b { font-size: 30px; line-height: 1; }
+      .nz-splash small { font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: #5F534C; }
+      @media (prefers-color-scheme: dark) { html:not([data-theme="light"]), html:not([data-theme="light"]) body { background: #1C1816; } html:not([data-theme="light"]) .nz-splash { color: #F4EFEA; } html:not([data-theme="light"]) .nz-splash small { color: #C2B5AB; } }
+      html[data-theme="dark"], html[data-theme="dark"] body { background: #1C1816; }
+      html[data-theme="dark"] .nz-splash { color: #F4EFEA; }
+      html[data-theme="dark"] .nz-splash small { color: #C2B5AB; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="nz-splash" role="status" aria-label="جاري التحميل"><img src="/icons/icon-192.png" alt="" /><b data-brand="ar">نظرة</b><small data-brand="en">Nazra</small></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
