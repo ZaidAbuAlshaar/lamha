@@ -355,9 +355,11 @@ def rule_triage(vitals: dict, red_flags: list, alerts: list, symptoms: list, tra
         re_.append(a["label_en"])
     has_dysp = any(s.get("key") == "dyspnea" and s.get("verified") for s in symptoms)
     if has_dysp and any(a["metric"] == "hr" for a in alerts):
-        level = max_level(level, "emergency")
-        ra.append("ارتفاع النبض عن معدله مع ضيق نفس")
-        re_.append("Heart rate above baseline together with shortness of breath")
+        # v2 rule: a trend-based flag may raise followup -> appointment only, never emergency. Severe breathlessness
+        # is still an emergency through the red-flag lexicon (severe_dyspnea) above.
+        level = max_level(level, "appointment")
+        ra.append("ارتفاع النبض عن معدله مع ضيق نفس — يستحق مراجعة الطبيب")
+        re_.append("Heart rate above baseline together with shortness of breath — worth a doctor's review")
     return level, ra, re_
 
 

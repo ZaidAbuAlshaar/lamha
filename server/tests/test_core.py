@@ -144,10 +144,13 @@ def test_trend_alone_is_appointment():
     assert core.rule_triage(V(96), [], al, [])[0] == "appointment"
 
 
-def test_hr_trend_plus_dyspnea_is_emergency():
+def test_hr_trend_plus_dyspnea_is_appointment_not_emergency():
+    # v2: trend flags never reach emergency; severe breathlessness does, via the red-flag lexicon.
     c = pipeline.analyze(PATIENT, V(96), "نفسي ضيق من مبارح وتعبانة", "voice", history(78), llm_fn=None, now=NOW)
-    assert c["triage"]["level"] == "emergency" and c["triage"]["rule_level"] == "emergency"
+    assert c["triage"]["level"] == "appointment" and c["triage"]["rule_level"] == "appointment"
     assert c["trend_alerts"][0]["metric"] == "hr"
+    c2 = pipeline.analyze(PATIENT, V(96), "مش قادر اتنفس", "voice", history(78), llm_fn=None, now=NOW)
+    assert c2["triage"]["level"] == "emergency"
 
 
 # ---------------------------------------------------------------- span verifier

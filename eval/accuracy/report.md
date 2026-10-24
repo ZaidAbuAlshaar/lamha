@@ -27,6 +27,8 @@ Failure = no result, HR null, or quality "poor". MAE / RMSE / Bland–Altman are
 | Simulated, standard | baseline (pre-hardening build) | 2 | 0 | 0% | 0.15 | 0.21 | 0.15 | -0.27 … 0.57 |
 | Simulated, hard | baseline (pre-hardening build) | 7 | 0 | 0% | 0.43 | 0.63 | -0.20 | -1.46 … 1.06 |
 
+> **Fix after this run (lead, 18:12):** the hardened engine now also requires *raw window-peak consistency* (share of 10 s windows whose untracked strongest fused peak is within ±6 bpm of the final HR; ≥0.6 for good, ≥0.4 for fair). Re-run on the same control: HR 100.2, consistency 0.27 → **quality poor (rejected)** (`../e2e/results/face_CONTROL_nopulse_nobreath_20261024-151131.json`); the 72 bpm clip stays 72.0 good, consistency 1.0 (`../e2e/results/face_72bpm_15rpm_20261024-151221.json`). Node bench (`web/tests/dsp2.test.ts`): 3 noise-only traces → poor/fair/fair, never good.
+
 Controls (no pulse injected; a trustworthy engine should reject them): baseline: face_CONTROL_nopulse_nobreath → HR 99.6 conf 0.00 quality poor → **rejected**; hardened: face_CONTROL_nopulse_nobreath → HR 75.6 conf 0.73 quality good → **NOT rejected**.
 
 ## Per clip
