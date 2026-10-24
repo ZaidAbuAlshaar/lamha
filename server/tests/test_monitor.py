@@ -116,12 +116,15 @@ def test_number_guard_rejects_invented_numbers():
     assert ok
     assert not forecast.guard("النبض وصل 130 ن/د.", facts)[0]
     assert not forecast.guard("احتمال دخول المستشفى 40%.", facts)[0]
+    assert not forecast.guard("النبض ارتفع من سبعة وسبعين فاصل سبعة إلى اثنين وتسعين.", facts)[0]  # spelled out
     n = forecast.doctor_note(facts, cache_key="t1", chat=lambda f: "النبض 150 ن/د وسيرتفع إلى 170.")
     assert n["source"] == "template" and n["numbers_verified"] is False
     assert "مؤشر للمتابعة، مش تشخيص" in n["text_ar"]
     assert forecast.guard(n["text_ar"], facts)[0]  # the template itself passes the guard
     good = forecast.doctor_note(facts, cache_key="t2", chat=lambda f: "النبض أعلى من معدله المعتاد 73 ن/د.")
     assert good["source"] == "ai" and "مؤشر للمتابعة، مش تشخيص" in good["text_ar"]
+    fc_only = forecast.doctor_note(facts, cache_key="t4", chat=lambda f: "التوقع بعد 24 ساعة 95 ن/د.")
+    assert fc_only["source"] == "template"  # a forecast number from the AI (without its interval) is rejected
     down = forecast.doctor_note(facts, cache_key="t3", chat=no_ai)
     assert down["source"] == "template"
 

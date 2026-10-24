@@ -241,8 +241,14 @@ def note_facts(mon: dict, fc: dict | None, agr: dict) -> dict:
     if fc:
         p24, p48 = fc["points"]
         f.update(forecast_24h=p24["hr"], forecast_24h_range=[p24["lo"], p24["hi"]], forecast_48h=p48["hr"],
-                 forecast_48h_range=[p48["lo"], p48["hi"]])
+                 forecast_48h_range=[p48["lo"], p48["hi"]],
+                 forecast_trend_ar="صاعد" if fc["slope_per_day"] > 0.5 else ("هابط" if fc["slope_per_day"] < -0.5 else "ثابت"))
     return f
+
+
+def llm_view(facts: dict) -> dict:
+    """What Gemma sees: no forecast numbers (a forecast number must never appear without its interval)."""
+    return {k: v for k, v in facts.items() if not (k.startswith("forecast_") and k != "forecast_trend_ar")}
 
 
 def allowed_from(facts: dict) -> list[float]:
@@ -254,10 +260,32 @@ def allowed_from(facts: dict) -> list[float]:
     return out + [24.0, 48.0]
 
 
+# Spelled-out numbers would bypass the digit guard (seen live: Gemma wrote a wrong baseline in words) -> reject them.
+NUM_WORDS = set(core.normalize(
+    "واحد واحده اثنين اثنان اتنين ثنتين ثلاث ثلاثه تلات تلاته اربع اربعه خمس خمسه ست سته سبع سبعه ثمان ثماني ثمانيه "
+    "تمانيه تسع تسعه عشر عشره عشرين عشرون ثلاثين ثلاثون اربعين اربعون خمسين خمسون ستين ستون سبعين سبعون ثمانين "
+    "ثمانون تسعين تسعون مئه ميه مائه ميت مئتين ميتين الف فاصل فاصله نص ربع").split())
+_TOK = re.compile(r"[؀-ۿ]+")
+
+
+def spelled_numbers(text: str) -> list[str]:
+    out = []
+    for tok in _TOK.findall(core.normalize(text or "")):
+        for pre in ("وال", "بال", "ال", "و", "ب"):
+            if tok.startswith(pre) and tok[len(pre):] in NUM_WORDS:
+                tok = tok[len(pre):]
+                break
+        if tok in NUM_WORDS:
+            out.append(tok)
+    return out
+
+
 def guard(text: str | None, facts: dict) -> tuple[bool, str]:
     t = (text or "").strip()
     if not t or len(t) > 600 or BANNED.search(t):
         return False, "banned_or_empty"
+    if spelled_numbers(t):
+        return False, "spelled_numbers"
     ok, bad = core.numbers_ok([t], allowed_from(facts), "")
     return (ok, "ok" if ok else f"invented_numbers:{bad[:5]}")
 
@@ -279,7 +307,7 @@ def template_note(facts: dict) -> str:
 
 
 SYSTEM = ("أنت مساعد لطبيب. اكتب 2-3 جمل عربية قصيرة تلخّص اتجاه نبض المريض للطبيب، من الحقائق المعطاة فقط. "
-          "لا تكتب أي رقم غير موجود في الحقائق. لا تكتب نسب أو احتمالات دخول مستشفى أو تدهور. لا تشخّص. "
+          "اكتب الأرقام بالأرقام فقط (مثل 72) ولا تكتبها بالكلمات، ولا تكتب أي رقم غير موجود في الحقائق. لا تكتب نسب أو احتمالات دخول مستشفى أو تدهور. لا تشخّص. "
           "اكتب النص فقط بدون عناوين.")
 
 
@@ -306,8 +334,8 @@ def doctor_note(facts: dict, cache_key: str | None = None, chat=None) -> dict:
     res = None
     if os.environ.get("NAZRA_FORECAST_NOTE_AI", "1") != "0":
         try:
-            text = (chat or _ollama_chat)(facts)
-            ok, why = guard(text, facts)
+            text = (chat or _ollama_chat)(llm_view(facts))
+            ok, why = guard(text, llm_view(facts))
             if ok:
                 if DISCLAIMER_AR not in text:
                     text = text.rstrip() + f" {DISCLAIMER_AR}."
@@ -322,6 +350,6 @@ def doctor_note(facts: dict, cache_key: str | None = None, chat=None) -> dict:
         res = {"text_ar": template_note(facts), "source": "template", "numbers_verified": True, "reason": "disabled"}
     if len(_note_cache) > 128:
         _note_cache.clear()
-    if res["source"] == "ai" or res["reason"].startswith("invented") or res["reason"] == "disabled":
+    if res["source"] == "ai" or res["reason"] in ("disabled", "spelled_numbers") or res["reason"].startswith("invented"):
         _note_cache[key] = res
     return res
