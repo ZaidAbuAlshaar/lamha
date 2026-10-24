@@ -9,10 +9,8 @@ if (typeof document !== 'undefined') document.title = brandTitle();
  *  Light: full-colour mark. Dark: white mark on a solid brand-red tile (brand board variation). */
 export function Logo({ size = 30 }: { size?: number }) {
   return (
-    <span className="brand-mark" style={{ width: size, height: size }} aria-hidden>
-      <img className="mk-color" src="/brand/mark.svg" alt="" width={size} height={size} loading="lazy" decoding="async" />
-      <img className="mk-white" src="/brand/mark-white.svg" alt="" width={size} height={size} loading="lazy" decoding="async" />
-    </span>
+    // CSS backgrounds (brand.css) so only the variant for the active theme is downloaded.
+    <span className="brand-mark" style={{ width: size, height: size }} aria-hidden />
   );
 }
 

@@ -134,8 +134,8 @@ a { color: inherit; }
 .app .sym { font-size: 16px; }
 .app .hero-vitals span { font-size: 14px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 8px; }
-.step-dots { display: flex; gap: 6px; }
-.step-dots i { width: 22px; height: 4px; border-radius: 4px; background: var(--line-2); }
+.step-dots { display: flex; gap: 6px; min-width: 0; flex-shrink: 1; }
+.step-dots i { flex: 0 1 22px; min-width: 8px; height: 4px; border-radius: 4px; background: var(--line-2); }
 .step-dots i.on { background: var(--brand); }
 .screen { flex: 1; display: flex; flex-direction: column; gap: 18px; padding-top: 8px; animation: rise .35s cubic-bezier(.2,.8,.2,1); }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

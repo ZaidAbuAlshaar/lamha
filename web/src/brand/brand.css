@@ -2,26 +2,21 @@
    everything else uses the theme tokens from styles.css. */
 .brand-row { display: flex; align-items: center; gap: 10px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
-.brand-mark { display: inline-grid; place-items: center; flex: none; border-radius: 24%; }
-.brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.brand-mark .mk-white { display: none; }
+.brand-mark { display: inline-block; flex: none; border-radius: 24%; background: url(/brand/mark.svg) center / contain no-repeat; }
 .brand-name { font-weight: 700; font-size: 22px; line-height: 1; }
 .brand-en { font-weight: 500; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); line-height: 1; padding-top: 3px; }
 
 /* dark: white mark on the solid brand-red tile, as on the brand board */
-:root[data-theme="dark"] .brand-mark { background: #B42D25; padding: 12%; }
-:root[data-theme="dark"] .brand-mark .mk-color { display: none; }
-:root[data-theme="dark"] .brand-mark .mk-white { display: block; }
+:root[data-theme="dark"] .brand-mark { background: #B42D25 url(/brand/mark-white.svg) center / 74% no-repeat; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .brand-mark { background: #B42D25; padding: 12%; }
-  :root:not([data-theme="light"]) .brand-mark .mk-color { display: none; }
-  :root:not([data-theme="light"]) .brand-mark .mk-white { display: block; }
+  :root:not([data-theme="light"]) .brand-mark { background: #B42D25 url(/brand/mark-white.svg) center / 74% no-repeat; }
 }
 
 .theme-toggle {
   width: 40px; height: 40px; flex: none; border-radius: 999px; display: inline-grid; place-items: center;
-  background: var(--panel); border: 1px solid var(--line-2); color: var(--text); font-size: 18px; line-height: 1; padding: 0;
+  background: transparent; border: 1px solid var(--line-2); color: var(--text); font-size: 18px; line-height: 1; padding: 0;
 }
 .theme-toggle:hover { border-color: var(--brand); }
 .theme-toggle:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
-.app .theme-toggle { width: 56px; height: 56px; font-size: 22px; }
+.app .theme-toggle { width: 56px; height: 56px; font-size: 22px; border-color: transparent; }
+.app .theme-toggle:hover { border-color: var(--line-2); }
