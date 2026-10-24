@@ -49,10 +49,15 @@ export class ScanDiag {
     const dts: number[] = [];
     for (let i = 1; i < ts.length; i++) dts.push(ts[i] - ts[i - 1]);
     const m = mean(dts);
+    const med = median(dts);
+    // Robust timing: one long pause (e.g. a permission prompt) must not make a steady 30 fps camera look broken.
+    const mad = median(dts.map((d) => Math.abs(d - med)));
     return {
-      fps: dts.length ? 1000 / m : 0,
+      fps: dts.length ? 1000 / med : 0,
       interval_ms_mean: m,
-      jitter_ms: std(dts),
+      jitter_ms: 1.4826 * mad,
+      jitter_std_ms: std(dts),
+      long_gaps: dts.filter((d) => d > 500).length,
       interval_ms_p95: pct(dts, 0.95),
       dropped_pct: dts.length ? (100 * dts.filter((d) => d > 1.8 * median(dts)).length) / dts.length : 0,
     };
@@ -86,6 +91,8 @@ export class ScanDiag {
       fps_mean: r1(t.fps),
       frame_interval_ms_mean: r1(t.interval_ms_mean),
       frame_jitter_ms: r1(t.jitter_ms),
+      frame_jitter_std_ms: r1(t.jitter_std_ms),
+      long_gaps: t.long_gaps,
       frame_interval_ms_p95: r1(t.interval_ms_p95),
       dropped_frames_pct: r1(t.dropped_pct),
       proc_ms_median: r1(median(this.procMs)),

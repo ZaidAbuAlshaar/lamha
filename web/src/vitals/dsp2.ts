@@ -319,7 +319,10 @@ export function analyze(inp: AnalysisInput, snrGood = -1): Analysis {
     }
     if (hs.length) { perAlgoHr[a] = Math.round(median(hs) * 10) / 10; perAlgoSnr[a] = Math.round(median(ss) * 10) / 10; }
   }
-  const ah = Object.values(perAlgoHr);
+  // Agreement between the two chrominance methods (POS, CHROM). GREEN still contributes to the fusion by its SNR,
+  // but it is the most motion/illumination-sensitive and on the first real iPhone scan it alone read 51 vs 71/70.
+  const chromaKeys = (['POS', 'CHROM'] as const).filter((k) => k in perAlgoHr);
+  const ah = chromaKeys.length >= 2 ? chromaKeys.map((k) => perAlgoHr[k]) : Object.values(perAlgoHr);
   const algoSpreadBpm = ah.length > 1 ? Math.max(...ah) - Math.min(...ah) : ah.length ? 0 : 99;
   // Whole-segment fused spectrum (invalid frames tapered out), searched within ±12 bpm of the tracked median:
   // keeps the long-window frequency resolution while the windows supply continuity and harmonic protection.

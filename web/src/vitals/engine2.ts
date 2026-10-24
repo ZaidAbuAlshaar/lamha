@@ -26,6 +26,7 @@ const IDX = {
 };
 
 type Pt = { x: number; y: number };
+const MAX_MOTION_FW_PER_S = 0.6;
 
 function hull(pts: Pt[]): Pt[] {
   const p = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
@@ -293,7 +294,9 @@ export class HardenedEngine {
     this.prevStable = stable; this.prevTs = ts;
     const rate = disp / dt;
     const poseOk = Math.abs(yaw) <= 20 && Math.abs(pitch) <= 25;
-    const frameValid = n > 60 && (!this.f.headPose || (poseOk && rate <= 0.25));
+    // 0.6 face-widths/s: hand tremor of a held phone stays below it; turning or nodding goes above.
+    // (The first real iPhone scan, 2026-10-24, had 30 % of frames rejected at the earlier 0.25.)
+    const frameValid = n > 60 && (!this.f.headPose || (poseOk && rate <= MAX_MOTION_FW_PER_S));
     const bg = bgLuma(img, W, H, { faceW, faceH, cx, cy });
     this.diag.add({
       brightness: br, clippedPct: total ? (100 * clipped) / total : 0, darkPct: 0, faceWidthPct: (100 * faceW) / W,
