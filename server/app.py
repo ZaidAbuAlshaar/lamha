@@ -102,6 +102,7 @@ def _history(checkins_oldest_first: list[dict], days: int) -> list[dict]:
 
 # ---------------------------------------------------------------- API
 # v2 routers
+app.include_router(__import__("insights_api").router)  # insights
 
 
 @app.get("/api/health")
@@ -276,6 +277,9 @@ def create_checkin(body: dict = Body(...)):
     c = pipeline.analyze(p, body.get("vitals") or {}, body.get("transcript") or "",
                          body.get("transcript_source") or "", prev,
                          llm_fn=health.guarded_llm(llm.extract, LLM_TIMEOUT_S), simulated=False)
+    for k in ("voice_markers", "context"):  # insights: keep client voice markers/context (pipeline drops unknown vitals keys)
+        if isinstance(body.get(k) or (body.get("vitals") or {}).get(k), dict):
+            c["vitals"][k] = _numbers_only(body.get(k) or body["vitals"][k])
     if body.get("diagnostics_id"):
         c["diagnostics_id"] = str(body["diagnostics_id"])[:20]
     store.put_checkin(c)

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, LEVEL, levelRank, type Checkin, type Health, type Level, type PatientDetail, type PatientSummary, type Validation } from './api';
 import { Brand, Conf, confLabel, LevelBadge, Qr, Sparkline, STRESS_AR, timeAgo, TrendChart, useInterval, Wave } from './components';
+import Community, { communityOn } from './Community'; import Timeline from './Timeline'; // insights
 
 const finalLevel = (c: Checkin | null): Level | null => (c ? c.review?.final_level ?? c.triage.level : null);
 
@@ -20,7 +21,7 @@ function beep(level: Level) {
 }
 
 export default function Doctor() {
-  const [tab, setTab] = useState<'queue' | 'accuracy'>('queue');
+  const [tab, setTab] = useState<'queue' | 'accuracy' | 'community'>('queue');
   const [patients, setPatients] = useState<PatientSummary[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
@@ -85,6 +86,7 @@ export default function Doctor() {
         <div className="tabs" role="tablist">
           <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>طابور الفرز</button>
           <button className={tab === 'accuracy' ? 'on' : ''} onClick={() => setTab('accuracy')}>دقة القياس</button>
+          {communityOn() && <button className={tab === 'community' ? 'on' : ''} onClick={() => setTab('community')}>الإنذار المجتمعي</button>}
         </div>
         <ModelChips h={health} />
       </header>
@@ -125,7 +127,7 @@ export default function Doctor() {
             </div>
           </aside>
         </div>
-      ) : (
+      ) : tab === 'community' ? (<Community />) : (
         <Accuracy />
       )}
       {toast && <div className={`toast ${toast.level === 'emergency' ? 'emg' : ''}`} role="alert">{toast.text}</div>}
@@ -290,6 +292,7 @@ function Detail({ summary, onChanged }: { summary: PatientSummary; onChanged: ()
             <TrendChart history={d.history.slice(-14)} baseline={base} />
           </div>
 
+          <Timeline patientId={p.id} checkins={d.checkins} />
           <Review c={c} onDone={() => { onChanged(); api.patient(summary.id).then(setD); }} />
         </>
       ) : (
