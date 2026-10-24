@@ -18,6 +18,7 @@
 //   --timeout <s>               overall wait for status=done (default 120)
 //   --mode auto|headless|headed auto = headless first, headed (off-screen) if no frames arrive (default auto)
 //   --load-timeout <s>          in auto mode: still 'loading' after this long => retry headed (default 25)
+//   --retries <n>               re-run (fresh Chrome) when the app itself reports status=error, max n times (default 2)
 //   --hr-tol <bpm> --rr-tol <rpm>   pass/fail tolerances vs nominal truth (default 3 / 3)
 //   --chrome <path>             default C:\Program Files\Google\Chrome\Application\chrome.exe
 //   --out-dir <dir>             default ./results
@@ -163,17 +164,26 @@ async function attempt(headed) {
   }
 }
 
+// attempt loop: headless first; switch to headed (off-screen) only for camera/device problems or no frames;
+// retry the same mode on other app errors (up to --retries) and record every attempt in the result.
+const retries = Number(args.retries ?? 2);
+const attempts = [];
+let headed = mode === 'headed';
+let retriesUsed = 0;
 let info;
-if (mode === 'headed') info = await attempt(true);
-else {
-  info = await attempt(false);
-  if (mode === 'auto' && ['no-frames', 'launch-failed', 'app-error'].includes(info.outcome)) {
-    console.log(`\nheadless attempt ended with '${info.outcome}' (${info.state?.error ?? info.launchError ?? 'no frames'}); retrying headed off-screen`);
-    const first = info;
-    info = await attempt(true);
-    info.headlessAttempt = { outcome: first.outcome, error: first.state?.error ?? first.launchError ?? null };
-  }
+for (;;) {
+  info = await attempt(headed);
+  const err = info.state?.error ?? info.launchError ?? null;
+  attempts.push({ mode: info.mode, outcome: info.outcome, error: err });
+  if (info.outcome === 'done' || info.outcome === 'timeout' || info.outcome === 'goto-failed') break;
+  const deviceProblem = info.outcome === 'no-frames' || info.outcome === 'launch-failed' || /NotFound|NotReadable|NotAllowed|Overconstrained|Permission|Requested device/i.test(err ?? '');
+  if (!headed && mode === 'auto' && deviceProblem) { console.log(`
+headless attempt ended with '${info.outcome}' (${err ?? 'no frames'}); retrying headed off-screen`); headed = true; continue; }
+  if (info.outcome === 'app-error' && retriesUsed < retries) { retriesUsed++; console.log(`
+app reported an error (${err}); retry ${retriesUsed}/${retries} in the same mode`); continue; }
+  break;
 }
+info.headlessAttempt = attempts.length > 1 ? attempts.slice(0, -1) : null;
 
 // ---- compare with ground truth ----
 const v = info.state?.vitals ?? null;
@@ -218,7 +228,7 @@ const result = {
   kind: 'SYNTHETIC bench test - validates the signal-processing pipeline against a known injected pulse/breathing rate; NOT clinical accuracy on real people',
   when: new Date().toISOString(),
   url, video: videoPath, mode: info.mode, chrome: info.chromeVersion,
-  outcome: info.outcome, elapsed_s: info.elapsedS ?? null, headless_attempt: info.headlessAttempt ?? null,
+  outcome: info.outcome, elapsed_s: info.elapsedS ?? null, earlier_failed_attempts: info.headlessAttempt ?? null, attempts_total: attempts.length,
   truth: truth ? { bpm: truth.bpm, bpm_realised_mean: truth.bpm_realised_mean, rpm: truth.rpm, seconds: truth.seconds, fps: truth.fps, seed: truth.seed, amplitudes: truth.pulse?.amplitude_pp_levels_rgb } : null,
   measured: v, app_error: info.state?.error ?? null, comparison: cmp, pass: isControl ? null : pass, control: isControl,
   console_errors: info.consoleErrors, console_info_ignored: info.consoleInfo, screenshot: info.screenshot, progress_trace: info.trace,

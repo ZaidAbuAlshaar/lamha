@@ -112,6 +112,7 @@ export class VitalsEngine {
   private lastRois: Roi[] = [];
   private lastLandmarks: NormalizedLandmark[] | null = null;
   private pulse = 0;
+  private stopped = false;
 
   constructor(
     private video: HTMLVideoElement,
@@ -130,6 +131,8 @@ export class VitalsEngine {
         }),
         loadLandmarker(),
       ]);
+      // stop() may have been called while we awaited (React remount): release the camera and bail out.
+      if (this.stopped) { stream.getTracks().forEach((tr) => tr.stop()); return; }
       this.stream = stream;
       this.landmarker = lm;
       this.video.srcObject = stream;
@@ -139,6 +142,7 @@ export class VitalsEngine {
       this.running = true;
       this.loop();
     } catch (e) {
+      if (this.stopped) return;
       const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
       this.emit('error', msg);
       throw e;
@@ -146,6 +150,7 @@ export class VitalsEngine {
   }
 
   stop() {
+    this.stopped = true;
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.stream?.getTracks().forEach((tr) => tr.stop());

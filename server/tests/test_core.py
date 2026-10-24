@@ -239,3 +239,13 @@ def test_negation_does_not_hide_real_flags():
     for txt in ["ما بقدر اتنفس", "صدري بيوجعني كثير", "ما في سخونة بس صدري بيوجعني"]:
         flags, _, _, _ = lexicon_scan(txt)
         assert flags, txt
+
+
+def test_stress_trend_never_changes_triage():
+    from core import rule_triage
+    alerts = [{"metric": "stress", "baseline": 30.0, "current": 80.0, "delta_pct": 166.7, "days": 14,
+               "label_ar": "مؤشر التوتر أعلى", "label_en": "Stress up"}]
+    vitals = {"hr_bpm": 75, "hr_confidence": 0.9, "rr_bpm": 15, "rr_confidence": 0.9, "quality": "good"}
+    level, reasons_ar, _ = rule_triage(vitals, [], alerts, [], "")
+    assert level == "followup"
+    assert any("تجريبي" in r for r in reasons_ar)

@@ -117,7 +117,7 @@ textarea.input { min-height: 110px; resize: vertical; line-height: 1.6; }
 
 /* camera */
 .cam { position: relative; border-radius: 22px; overflow: hidden; background: #000; aspect-ratio: 3 / 4; border: 1px solid var(--line); }
-.cam video { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); pointer-events: none; } /* covered by the canvas; kept visible so iOS keeps decoding frames */
 .cam canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .cam .ring { position: absolute; inset: 0; pointer-events: none; }
 .cam .hud { position: absolute; inset-inline: 12px; top: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }

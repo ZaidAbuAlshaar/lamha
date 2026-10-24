@@ -6,5 +6,12 @@
   "description": "Synthetic-video bench harness for the Nazra browser rPPG engine",
   "dependencies": {
     "puppeteer-core": "^25.16.0"
+  },
+  "scripts": {
+    "stub": "node stub/serve.mjs",
+    "make-videos": "python make_video.py --bpm 72 --rpm 15 --out E:\nazra-e2e\face_72bpm_15rpm.y4m --seed 1 && python make_video.py --bpm 96 --rpm 20 --out E:\nazra-e2e\face_96bpm_20rpm.y4m --seed 2",
+    "check-video": "python check_video.py",
+    "e2e:stub": "node run_e2e.mjs --video E:\nazra-e2e\face_72bpm_15rpm.y4m --url http://localhost:5199/?seconds=30",
+    "e2e:app": "node run_e2e.mjs --video E:\nazra-e2e\face_72bpm_15rpm.y4m --url \"http://localhost:5173/#/scan-test?seconds=30\" --timeout 120"
   }
 }

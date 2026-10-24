@@ -263,9 +263,9 @@ function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; 
           <Conf value={v.rr_confidence} color="var(--rr)" />
         </div>
         <div className="vtile">
-          <div className="lbl"><span>مؤشر التوتر</span><span>تقريبي</span></div>
+          <div className="lbl"><span>مؤشر التوتر</span><span>تجريبي</span></div>
           <div className="val hrv">{v.stress_index ?? '--'}<small>/100</small></div>
-          <div className="sub">{v.stress_level ? `${STRESS_AR[v.stress_level]} · HRV ${Math.round(v.hrv_rmssd_ms!)} ms` : 'الإشارة مش كافية لحساب التوتر'}</div>
+          <div className="sub">{v.stress_level ? `${STRESS_AR[v.stress_level]} · تجريبي، مش للتشخيص` : 'الإشارة مش كافية لحساب التوتر'}</div>
         </div>
       </div>
       <div className="card stack">
@@ -399,9 +399,9 @@ function Voice({ onSend }: { onSend: (t: string, src: Checkin['transcript_source
 }
 
 function Sending({ error, onRetry }: { error: string; onRetry: () => void }) {
-  const [k, setK] = useState(0);
+  const [secs, setSecs] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setK((x) => Math.min(x + 1, 3)), 1600);
+    const id = setInterval(() => setSecs((x) => x + 1), 1000);
     return () => clearInterval(id);
   }, []);
   const steps = ['استخراج الأعراض من كلامك (موديل مفتوح على جهاز العيادة)', 'التحقق إنه كل عرض مذكور حرفياً بكلامك', 'فحص علامات الخطر بقواعد طبية ثابتة', 'مقارنة قراءتك بمعدلك آخر 14 يوم'];
@@ -409,11 +409,11 @@ function Sending({ error, onRetry }: { error: string; onRetry: () => void }) {
     <div className="screen">
       <h2>عم نجهّز ملخصك للطبيب</h2>
       {!error && <div className="spinner" />}
+      {!error && <p className="muted num" style={{ textAlign: 'center' }}>{secs} s</p>}
       <div className="card steps-live">
-        {steps.map((s, i) => (
-          <div key={s} className={i < k ? 'done' : i === k ? 'on' : ''}>
-            <span>{i < k ? '✓' : i === k ? '●' : '○'}</span><span>{s}</span>
-          </div>
+        <h3>شو عم يصير هلّق على خادم العيادة</h3>
+        {steps.map((s) => (
+          <div key={s} className="on"><span className="hr">•</span><span>{s}</span></div>
         ))}
       </div>
       {error && (

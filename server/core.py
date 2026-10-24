@@ -329,6 +329,12 @@ def rule_triage(vitals: dict, red_flags: list, alerts: list, symptoms: list, tra
             ra.append("اتصل على 911 فوراً")
             re_.append("Call 911 now")
     for a in alerts:
+        if a["metric"] == "stress":
+            # HRV from a 30 s phone video is not reliable enough (synthetic-video bench: RMSSD 20.6 ms read vs
+            # ~3.5 ms true), so the stress trend is shown to the doctor but never changes the triage level.
+            ra.append(a["label_ar"] + " (تجريبي، لا يؤثر على الفرز)")
+            re_.append(a["label_en"] + " (experimental, does not affect triage)")
+            continue
         level = max_level(level, "appointment")
         ra.append(a["label_ar"])
         re_.append(a["label_en"])

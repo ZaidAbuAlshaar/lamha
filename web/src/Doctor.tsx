@@ -68,7 +68,12 @@ export default function Doctor() {
     return g;
   }, [patients]);
   const selected = patients.find((p) => p.id === sel) ?? null;
-  const origin = window.location.origin;
+  // On localhost the QR would point phones nowhere, so let the operator paste the HTTPS tunnel link.
+  const isLocal = /^(localhost|127\.|\[::1\])/.test(window.location.hostname);
+  const [shareUrl, setShareUrl] = useState(() => {
+    try { return localStorage.getItem('nazra.shareUrl') ?? ''; } catch { return ''; }
+  });
+  const origin = isLocal && shareUrl ? shareUrl.replace(/\/+$/, '').replace(/\/#.*$/, '') : window.location.origin;
 
   return (
     <div className="dash">
@@ -90,7 +95,13 @@ export default function Doctor() {
             {(['emergency', 'appointment', 'followup'] as Level[]).map((lvl) => (
               <div key={lvl} style={{ display: 'grid', gap: 8 }}>
                 <div className="qhead"><span className={LEVEL[lvl].cls}>{LEVEL[lvl].ar}</span><span className="num">{groups[lvl].length}</span></div>
-                {groups[lvl].map((p) => <QItem key={p.id} p={p} on={p.id === sel} fresh={fresh.has(p.id)} onClick={() => setSel(p.id)} />)}
+                {groups[lvl].map((p) => (
+                  <QItem key={p.id} p={p} on={p.id === sel} fresh={fresh.has(p.id)} onClick={() => {
+                    setSel(p.id);
+                    // On phones the detail sits below the queue.
+                    if (window.innerWidth < 760) requestAnimationFrame(() => document.querySelector('.detail')?.scrollIntoView({ behavior: 'smooth' }));
+                  }} />
+                ))}
               </div>
             ))}
             {!patients.length && !err && <div className="empty">ما في مرضى بعد</div>}
@@ -102,6 +113,10 @@ export default function Doctor() {
               <Qr text={`${origin}/#/`} />
               <p className="muted" style={{ fontSize: 13 }}>امسح بكاميرا موبايلك، اعمل الفحص 30 ثانية، وشوف نتيجتك توصل هون مباشرة.</p>
               <p className="num dim" style={{ fontSize: 11, wordBreak: 'break-all' }}>{origin}</p>
+              {isLocal && (
+                <input className="input num" style={{ fontSize: 12, padding: 8 }} placeholder="الصق رابط https للتنل" value={shareUrl}
+                  onChange={(e) => { setShareUrl(e.target.value.trim()); try { localStorage.setItem('nazra.shareUrl', e.target.value.trim()); } catch { /* private mode */ } }} />
+              )}
             </div>
             <LiveFeed onPick={setSel} />
             <div className="card stack">
@@ -227,7 +242,7 @@ function Detail({ summary, onChanged }: { summary: PatientSummary; onChanged: ()
           <div className="dgrid">
             <VitalCard label="النبض" unit="bpm" value={c.vitals.hr_bpm} cls="hr" conf={c.vitals.hr_confidence} delta={delta(c.vitals.hr_bpm, base?.hr)} extra={c.vitals.ref_hr_bpm != null ? `ساعة ذكية: ${c.vitals.ref_hr_bpm}` : undefined} />
             <VitalCard label="التنفس" unit="/min" value={c.vitals.rr_bpm} cls="rr" conf={c.vitals.rr_confidence} delta={delta(c.vitals.rr_bpm, base?.rr)} />
-            <VitalCard label="التوتر" unit="/100" value={c.vitals.stress_index} cls="hrv" delta={delta(c.vitals.stress_index, base?.stress)} extra={c.vitals.stress_level ? `${STRESS_AR[c.vitals.stress_level]}${c.vitals.hrv_rmssd_ms ? ` · RMSSD ${Math.round(c.vitals.hrv_rmssd_ms)} ms` : ''}` : 'غير كافٍ'} />
+            <VitalCard label="التوتر (تجريبي)" unit="/100" value={c.vitals.stress_index} cls="hrv" delta={delta(c.vitals.stress_index, base?.stress)} extra={c.vitals.stress_level ? `${STRESS_AR[c.vitals.stress_level]}${c.vitals.hrv_rmssd_ms ? ` · RMSSD ${Math.round(c.vitals.hrv_rmssd_ms)} ms` : ''}` : 'غير كافٍ'} />
             <div className="vtile">
               <div className="lbl">إشارة النبض</div>
               <Wave data={c.vitals.bvp_preview ?? []} height={54} />

@@ -50,7 +50,7 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 - **Grounding:** every AI symptom must quote words that literally appear in the transcript. Quotes that don't match are shown greyed out and ignored for triage.
 - **No invented numbers:** if the AI summary contains any number that isn't a measured input, it is replaced by a code-generated summary (`numbers_verified=false` is shown to the doctor).
 - **Negation aware:** "ما في وجع بصدري" ("no chest pain") does not trigger the chest-pain flag. "ما بقدر أتنفس" ("I can't breathe") still does.
-- **Signal honesty:** every vital carries a confidence value. Low-quality scans are not used for the vitals rules, and the patient is asked to repeat the scan. The stress index is only computed when the pulse SNR is ≥ 10 dB, because our synthetic tests showed that noise inflates HRV.
+- **Signal honesty:** every vital carries a confidence value. Low-quality scans are not used for the vitals rules, and the patient is asked to repeat the scan. The HRV stress index is shown as **experimental** and **never changes the triage level**. It is only computed when the pulse SNR is ≥ 10 dB, and even then our synthetic-video bench shows noise inflates it (RMSSD 20.6 ms read vs ~3.5 ms true).
 - **Human in the loop:** the doctor confirms or overrides each check-in. Downgrading a level shows a warning.
 
 ## Privacy
@@ -66,16 +66,17 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 |---|---|---|
 | DSP bench: 5 synthetic RGB traces with camera-timing jitter, illumination drift and noise | HR abs error 0.2 / 0.3 / 0.3 / 0.4 / 0.9 bpm (62–118 bpm). RR exact (12–24 /min). 5/5 pass | `web/tests/dsp.test.ts` |
 | HRV vs noise (synthetic) | RMSSD is 8 ms with no noise; noise inflates it (43 ms at 12 dB SNR) → stress gated at SNR ≥ 10 dB | same file, noise sweep |
-| **End-to-end: synthetic face video (known pulse 72 bpm, breathing 15/min) fed as the camera into the real app in Chrome** | **HR 72.3 bpm, RR 15/min, quality "good", face tracked 100% of frames** | `eval/e2e/results/` |
+| **End-to-end: synthetic face videos with known pulse and breathing, fed as the camera into the real app (headless Chrome)** | **72 → 72.3 bpm and 96 → 95.7 bpm; RR 15 → 15 and 20 → 20; quality "good". A no-pulse control comes back "poor" with confidence 0** | `eval/e2e/` |
+| HRV on the same videos | **Not reliable:** RMSSD read 20.6 / 10.2 ms vs ~3.5 / ~1.7 ms true → stress labelled experimental and kept out of triage | `eval/e2e/README.md` |
 | LLM smoke: 5 synthetic Arabic check-ins through Gemma 4 | 13/13 spans verified; 5/5 numbers verified; injection case still emergency; warm latency 4.8–7.6 s | `eval/llm/` |
-| Server unit tests | 64 passed | `server/tests/` |
+| Server unit tests | 65 passed | `server/tests/` |
 | Whisper on GPU | 4.2 s clip (webm/opus) transcribed in 1.4 s | measured via `/api/transcribe` |
 | Accuracy on real people vs smartwatch | **Not measured yet.** The dashboard's "دقة القياس" ("measurement accuracy") tab computes it live from real paired readings; until then it shows n = 0 | `/api/validation` |
 
 ## Honest limitations
 
 - rPPG is sensitive to lighting, motion, makeup and darker skin tones (lower signal). We do not claim clinical accuracy. Bench tests on synthetic signals prove the processing is correct, **not** that it is accurate on people.
-- An HRV-based stress index from a 30-second phone video is a rough proxy, and the UI labels it «تقريبي» ("approximate").
+- The HRV-based stress index from a 30-second phone video is experimental (see the bench above). The UI labels it «تجريبي» ("experimental") and it never affects triage.
 - Respiration is estimated from motion; talking or moving during the scan breaks it.
 - 5 LLM test cases are a smoke test, not a validation set.
 - Not a medical device. Real deployment needs clinical validation and regulatory approval.
