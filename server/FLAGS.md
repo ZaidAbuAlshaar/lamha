@@ -23,6 +23,14 @@ All behaviour added in the hardening pass is behind one of these. Defaults are w
 | `NAZRA_REC_MAX_MB` | `200` | Max size of one dev recording upload (HTTP 413 above). |
 | `NAZRA_COMMUNITY` | `1` | Insights: `GET /api/community` (area early-warning: HR ≥ own baseline ×1.10 + cough/dyspnea/fever/sore_throat/runny_nose in the last 72 h; alert when count ≥ 3 and ≥ mean + 2·SD of the area's 3 earlier 72 h windows in 14 days; areas with < 5 patients are suppressed, no names). `0` = 404. |
 | `NAZRA_VOICE_MARKERS` | `1` | Insights: Whisper `word_timestamps=True`; `/api/transcribe` also returns `words` + `voice_markers` (pauses ≥ 300 ms, words per breath group, words/s, quality); `GET /api/patients/{id}/voice` compares with the patient's own baseline (≥ 3 earlier ok-quality voice check-ins). `0` = no word timestamps, no markers. |
+| `NAZRA_MONITOR` | `1` | Monitoring engine (`monitor.py`): daily medians, robust baseline (median of last 7–14 good days excl. last 3, SD = 1.4826·MAD ≥ 3), robust z ≥ 3 → «أعد القياس», upper CUSUM (k 0.5, h 4) → may raise followup → appointment only. Also `GET /api/patients/{id}/forecast`. `0` = no bump, endpoint 404. |
+| `NAZRA_CHRONOS` | `1` | Chronos-Bolt cross-check of the linear forecast via a persistent CPU subprocess worker. `0` = linear only (with a note). |
+| `NAZRA_CHRONOS_PY` | `D:
+azra-chronos-venv\Scripts\python.exe` | Separate torch venv for the worker (server venv stays torch-free). |
+| `NAZRA_CHRONOS_MODEL` | `amazon/chronos-bolt-small` | Falls back to `amazon/chronos-bolt-tiny`. Weights in `HF_HOME`, offline. |
+| `NAZRA_CHRONOS_TIMEOUT_S` | `60` | Per-prediction timeout (start-up: 2×). On failure → linear only. |
+| `NAZRA_FORECAST_NOTE_AI` | `1` | Gemma doctor trend note (20 s, temp 0, think off). Numbers guard (±1 vs facts, spelled-out numbers rejected, no forecast numbers, no probabilities) → else fixed template. `0` = template only. |
+| `NAZRA_DEMO_TEAM_HR` | `70` | Centre HR for the «عضو الفريق (مؤقت)» demo profile (`demo/monitor.py`). |
 | `HF_HOME` / `HF_HUB_OFFLINE` | `D:\models\hf` / `1` | Whisper model cache; offline. |
 
 ## `/api/health`

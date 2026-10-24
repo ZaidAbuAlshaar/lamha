@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, LEVEL, levelRank, type Checkin, type Health, type Level, type PatientDetail, type PatientSummary, type Validation } from './api';
 import { Brand, Conf, confLabel, LevelBadge, Qr, Sparkline, STRESS_AR, timeAgo, TrendChart, useInterval, Wave } from './components';
 import Community, { communityOn } from './Community'; import Timeline from './Timeline'; // insights
+import { ForecastCard } from './ForecastCard';
 
 const finalLevel = (c: Checkin | null): Level | null => (c ? c.review?.final_level ?? c.triage.level : null);
 
@@ -291,6 +292,8 @@ function Detail({ summary, onChanged }: { summary: PatientSummary; onChanged: ()
             <div className="row between"><h3>منحنى آخر 14 يوم</h3><span className="dim" style={{ fontSize: 12 }}>الخط المتقطع = معدل المريض نفسه{base ? ` (n=${base.n})` : ''}</span></div>
             <TrendChart history={d.history.slice(-14)} baseline={base} />
           </div>
+
+          <ForecastCard patientId={p.id} refreshKey={latestId} />
 
           <Timeline patientId={p.id} checkins={d.checkins} />
           <Review c={c} onDone={() => { onChanged(); api.patient(summary.id).then(setD); }} />

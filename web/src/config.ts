@@ -24,6 +24,7 @@ export const FLAG_DEFAULTS = {
   twoReadings: true, // v2 protocol: two 30 s readings (a third if they differ > 5 bpm); poor readings never counted
   breathing: true, // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
   dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
+  forecastCard: true, // doctor «توقّع صحة المريض» card (monitor engine + forecast)
 };
 
 export type Flags = typeof FLAG_DEFAULTS;
