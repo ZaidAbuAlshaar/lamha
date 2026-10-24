@@ -128,6 +128,9 @@ def test_appointment_report_uses_matched_cards_and_verbatim_911_lines():
     assert len(r["questions_for_doctor_ar"]) == 3
     hr = next(v for v in r["vitals"] if v["key"] == "hr")
     assert hr["value"] == 115 and "يستحق المتابعة" in hr["meaning_ar"]
+    prev = [make(GOOD, now=NOW - timedelta(days=d)) for d in (5, 4, 3, 2, 1)]
+    c2 = make({**GOOD, "hr_bpm": 115}, prev=prev)
+    assert c2["trend_alerts"] and "%" not in report.build_report(c2, PAT, prev)["summary_ar"]  # calm summary
     assert {s["title"] for s in r["sources"]} == {by_id["fever"]["source"]["title"], by_id["cough"]["source"]["title"]}
 
 

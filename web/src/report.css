@@ -34,8 +34,8 @@
 .rep-vlabel { font-size: 15px; color: var(--muted); }
 .rep-vval { font-size: 34px; font-weight: 700; line-height: 1.2; }
 .rep-vval small { font-size: 14px; font-weight: 500; color: var(--muted); }
-.rep-vital.hr .rep-vval .num { color: var(--hr); }
-.rep-vital.rr .rep-vval .num { color: var(--rr); }
+.rep-v-hr .rep-vval .num { color: var(--hr); }
+.rep-v-rr .rep-vval .num { color: var(--rr); }
 .rep-vq { font-size: 13px; }
 .rep-vmean { font-size: 16px; margin: 4px 0 0 !important; }
 .rep-note { font-size: 12px; color: var(--dim); }

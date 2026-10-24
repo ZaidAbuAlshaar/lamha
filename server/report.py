@@ -163,11 +163,14 @@ def change_vs_baseline(c: dict, prev: list[dict]) -> str:
 def _summary(c: dict, prev: list[dict], patient: dict | None) -> tuple[str, str]:
     """Existing AI summary if it still passes the number guard, else the code template."""
     v, alerts = c.get("vitals") or {}, c.get("trend_alerts") or []
-    template = core.template_summary(v, c.get("symptoms") or [], c.get("red_flags") or [], alerts)[0]
+    # Trend alerts are told separately in a calm, number-free sentence (change_vs_baseline), not in the summary.
+    template = core.template_summary(v, c.get("symptoms") or [], c.get("red_flags") or [], [])[0]
     ai = c.get("ai") or {}
     s = (ai.get("summary_ar") or "").strip()
     if not s or not ai.get("numbers_verified", True):
         return template, "template"
+    for a in alerts:  # the stored summary may carry the code's trend-alert sentence; the report says it calmly elsewhere
+        s = s.replace(f" تنبيه: {a.get('label_ar')}.", "").strip()
     baseline = core.compute_baseline(prev, core.parse_ts(c["created_at"])) if prev else None
     allowed = core.allowed_numbers(v, baseline, alerts, (patient or {}).get("age"))
     ok, _ = core.numbers_ok([s], allowed, c.get("transcript") or "")

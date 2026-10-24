@@ -173,7 +173,7 @@ export default function Report({ id }: { id: string }) {
               <h2>القياسات</h2>
               <div className="rep-vitals">
                 {rep.vitals.map((v) => (
-                  <div key={v.key} className={`rep-vital ${v.key}`}>
+                  <div key={v.key} className={`rep-vital rep-v-${v.key}`}>
                     <div className="rep-vlabel">{v.label_ar}</div>
                     <div className="rep-vval"><span className="num">{v.value != null && v.usable ? v.value : '--'}</span> <small>{v.unit_ar}</small></div>
                     <div className="rep-vq muted">جودة القراءة: {v.quality_ar} · {v.confidence_ar}</div>
@@ -224,7 +224,7 @@ export default function Report({ id }: { id: string }) {
               {voice === 'loading' ? 'عم نجهّز الصوت…' : voice === 'playing' ? 'وقّف الصوت' : 'اسمع التقرير'}
             </button>
             {voiceNote && <p className="muted rep-small">{voiceNote}</p>}
-            <button className="btn block" onClick={() => window.print()}>اطبع / احفظ PDF</button>
+            <button className="btn block" onClick={() => { void document.fonts.ready.then(() => window.print()); }}>اطبع / احفظ PDF</button>
             <details className="rep-share">
               <summary>شارك على واتساب</summary>
               <label className="muted rep-small" htmlFor="rep-share-text">إنت بتختار شو ينبعث — عدّل النص قبل الإرسال:</label>
