@@ -171,3 +171,32 @@ def test_routes_without_models(tmp_path):
         if store._con:
             store._con.close()
         store._con, store.DB_PATH = old_con, old_path
+
+
+def test_checkin_keeps_voice_markers_and_context_and_flag_off(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    import app as app_mod
+    import llm
+    monkeypatch.setattr(llm, "extract", lambda *a, **k: {"ok": False, "data": None, "error": "unreachable",
+                                                         "latency_ms": 0, "model": None})
+    old_path, old_con = store.DB_PATH, store._con
+    store._con = None
+    store.DB_PATH = tmp_path / "ck.db"
+    try:
+        store.seed_if_empty()
+        c = TestClient(app_mod.app)
+        vm = voice_markers.compute(_words([(i * 0.4, i * 0.4 + 0.3) for i in range(10)]))
+        r = c.post("/api/checkins", json={"patient_id": "p3", "transcript": "تمام", "transcript_source": "voice",
+                                          "vitals": {"hr_bpm": 80, "hr_confidence": 0.9, "quality": "good",
+                                                     "context": {"took_meds": True, "exercise": False}},
+                                          "voice_markers": vm})
+        v = r.json()["vitals"]
+        assert v["voice_markers"]["n_words"] == 10 and v["context"]["took_meds"] is True
+        monkeypatch.setenv("NAZRA_COMMUNITY", "0")
+        assert c.get("/api/community").status_code == 404
+        monkeypatch.setenv("NAZRA_VOICE_MARKERS", "0")
+        assert c.get("/api/patients/p1/voice").json()["enabled"] is False
+    finally:
+        if store._con:
+            store._con.close()
+        store._con, store.DB_PATH = old_con, old_path

@@ -20,7 +20,7 @@
 .ins-changes p { margin: 0; font-size: 15px; line-height: 1.8; }
 
 .ins-tl { display: grid; gap: 6px; max-height: 420px; overflow-y: auto; padding-inline-end: 4px; }
-.ins-tl-row { display: grid; grid-template-columns: 120px 76px 76px 64px 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2); border-inline-start: 3px solid var(--line-2); font-size: 13px; }
+.ins-tl-row { display: grid; grid-template-columns: 150px 76px 76px 64px 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2); border-inline-start: 3px solid var(--line-2); font-size: 13px; }
 .ins-tl-row.emg { border-inline-start-color: var(--emg); }
 .ins-tl-row.apt { border-inline-start-color: var(--apt); }
 .ins-tl-row.fu { border-inline-start-color: var(--fu); }
