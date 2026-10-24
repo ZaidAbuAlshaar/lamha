@@ -48,7 +48,7 @@ class CallTimeout(Exception):
     pass
 
 
-def run_with_timeout(fn, timeout_s: float, *args, **kwargs):
+def run_with_timeout(fn, timeout_s: float, /, *args, **kwargs):
     """Run fn in a daemon thread; raise CallTimeout after timeout_s. The worker keeps running in the background
     (Python threads cannot be killed) but the caller is released, so the patient is never blocked."""
     q: queue.Queue = queue.Queue(maxsize=1)

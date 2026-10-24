@@ -313,3 +313,29 @@ def test_asr_device_flag():
     assert asr.candidates("cpu") == [("cpu", "int8")]
     assert asr.candidates("cuda") == [("cuda", "int8_float16")]
     assert [d for d, _ in asr.candidates("auto")] == ["cuda", "cpu"]
+
+
+def test_run_with_timeout_passes_timeout_s_kwarg_through():
+    assert health.run_with_timeout(lambda timeout_s=None: timeout_s, 1, timeout_s=7) == 7
+
+
+def test_warmup_gemma_records_and_load_continues(monkeypatch):
+    import app as app_mod
+    import asr
+    seen = {}
+    monkeypatch.setattr(llm, "extract", lambda t, p, c, timeout_s=None: seen.setdefault("t", timeout_s) and {
+        "ok": True, "latency_ms": 12, "error": None})
+    monkeypatch.delenv("NAZRA_NO_MODELS", raising=False)
+    monkeypatch.setattr(llm, "free_vram_and_preload", lambda *a, **k: [])
+    monkeypatch.setattr(asr, "load", lambda: seen.setdefault("asr", True))
+    app_mod._load_models()
+    assert seen["t"] == app_mod.WARMUP_TIMEOUT_S and seen["asr"] is True
+    assert health.snapshot("gemma")["warm"] is True and health.snapshot("gemma")["warmup_ms"] == 12
+
+    def boom(*a, **k):
+        raise RuntimeError("x")
+    seen.clear()
+    monkeypatch.setattr(app_mod, "warmup_gemma", boom)
+    app_mod._load_models()
+    assert seen["asr"] is True  # Whisper still loads when the warm-up crashes
+    monkeypatch.setenv("NAZRA_NO_MODELS", "1")

@@ -57,7 +57,10 @@ def _load_models():
     except Exception as e:
         boot["llm_preload_error"] = f"{type(e).__name__}: {e}"[:300]
     if os.environ.get("NAZRA_WARMUP", "1") != "0":
-        warmup_gemma()
+        try:
+            warmup_gemma()
+        except Exception as e:  # a warm-up problem must never stop Whisper from loading
+            health.record("gemma", None, False, f"warm-up crashed: {type(e).__name__}: {e}", warmup=True)
     asr.load()
     if asr.state["ready"] and asr.warmup_ms is not None:
         health.record("whisper", asr.warmup_ms, True, warmup=True)

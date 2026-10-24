@@ -3,7 +3,8 @@ import { api, LEVEL, type Checkin, type Patient, type Vitals } from './api';
 import { Brand, Conf, confLabel, STRESS_AR, Wave } from './components';
 import { VitalsEngine, loadLandmarker, type LiveUpdate, type VitalsResult } from './vitals/engine';
 import DebugOverlay from './DebugOverlay';
-import { flagSummary, getFlags, isDebug } from './config';
+import { flagSummary, getFlags, isDebug, scanMode } from './config';
+import { HardenedEngine, type GateCode, type HardLiveUpdate } from './vitals/engine2';
 import { REASON_AR } from './vitals/diag';
 
 export type ScanResult = VitalsResult & { diagnostics_id?: string | null };
@@ -27,6 +28,8 @@ const SCAN_SECONDS = 30;
 
 export default function Check() {
   const [step, setStep] = useState<Step>('home');
+  const [mode, setMode] = useState<'face' | 'finger'>('face');
+  const [poorCount, setPoorCount] = useState(0);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [vitals, setVitals] = useState<VitalsResult | null>(null);
   const [refHr, setRefHr] = useState('');
@@ -72,8 +75,11 @@ export default function Check() {
       {step === 'home' && <Home onStart={() => setStep('who')} />}
       {step === 'who' && <Who onPick={(p) => { setPatient(p); setStep('consent'); }} />}
       {step === 'consent' && <Consent onOk={() => setStep('scan')} />}
-      {step === 'scan' && <Scan seconds={SCAN_SECONDS} onDone={(v) => { setVitals(v); setStep('vitals'); }} />}
-      {step === 'vitals' && vitals && <VitalsView v={vitals} refHr={refHr} setRefHr={setRefHr} onRetry={() => setStep('scan')} onNext={() => setStep('voice')} />}
+      {step === 'scan' && <Scan seconds={SCAN_SECONDS} mode={mode} onDone={(v) => { setVitals(v); if (v.quality === 'poor') setPoorCount((c) => c + 1); setStep('vitals'); }} />}
+      {step === 'vitals' && vitals && (
+        <VitalsView v={vitals} refHr={refHr} setRefHr={setRefHr} onRetry={() => setStep('scan')} onNext={() => setStep('voice')}
+          fingerOffer={getFlags().fingertip && mode === 'face' && poorCount >= 2 ? () => { setMode('finger'); setStep('scan'); } : undefined} />
+      )}
       {step === 'voice' && <Voice onSend={send} />}
       {step === 'sending' && <Sending error={sendErr} onRetry={() => setStep('voice')} />}
       {step === 'result' && checkin && <Result c={checkin} onAgain={restart} />}
@@ -199,16 +205,36 @@ const GUIDE: Record<string, string> = {
 
 let scanAttempt = 0;
 
-export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDone: (v: ScanResult) => void; onLive?: (u: LiveUpdate) => void }) {
+const GATE_AR: Record<GateCode, string> = {
+  'no-face': 'وجّه الكاميرا على وجهك',
+  far: 'قرّب وجهك',
+  backlit: 'خلّي الضو قدّامك مش وراك',
+  dark: 'خلّي الضو قدّامك مش وراك',
+  overexposed: 'الإضاءة قوية كثير',
+  move: 'ثبّت الموبايل',
+  pose: 'اتطلّع على الكاميرا مباشرة',
+  no_finger: 'غطّي الكاميرا والفلاش بإصبعك',
+};
+
+/** The hardened engine is used unless every hardening flag is off (flags=all-off → original engine). */
+function wantHardened() {
+  const f = getFlags();
+  return f.frameCallback || f.polygonRoi || f.skinMask || f.headPose || f.preScanGate || f.multiAlgo || f.adaptiveExtend || f.qualityScore;
+}
+
+export function CameraScan({ seconds, onDone, onLive, mode }: { seconds: number; onDone: (v: ScanResult) => void; onLive?: (u: LiveUpdate) => void; mode?: 'face' | 'finger' }) {
   const debug = isDebug();
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [u, setU] = useState<LiveUpdate | null>(null);
+  const [u, setU] = useState<HardLiveUpdate | null>(null);
   const done = useRef(false);
+  const engRef = useRef<{ forceStart?: () => void } | null>(null);
+  const m = mode ?? scanMode();
   useEffect(() => {
     done.current = false;
     const attempt = ++scanAttempt;
-    const eng = new VitalsEngine(video.current!, canvas.current!, seconds, (up) => {
+    const hardened = wantHardened() || m === 'finger';
+    const handler = (up: HardLiveUpdate) => {
       setU(up);
       onLive?.(up);
       if (up.phase === 'analyzing' && !done.current) {
@@ -221,7 +247,11 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
           onDone(r);
         }, 30);
       }
-    }, { debug });
+    };
+    const eng = hardened
+      ? new HardenedEngine(video.current!, canvas.current!, seconds, handler, { flags: getFlags(), debug, mode: m, maxSeconds: 45 })
+      : new VitalsEngine(video.current!, canvas.current!, seconds, handler, { debug });
+    engRef.current = eng as { forceStart?: () => void };
     eng.start().catch(() => undefined);
     // Keep the screen awake: iOS Low Power Mode auto-locks after 30 s, which would freeze the scan.
     let lock: { release: () => Promise<void> } | null = null;
@@ -229,17 +259,24 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
     nav.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => undefined);
     return () => { eng.stop(); lock?.release().catch(() => undefined); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seconds]);
-  const remaining = Math.max(0, Math.ceil(seconds - (u?.elapsed ?? 0)));
+  }, [seconds, m]);
+  const target = u?.target ?? seconds;
+  const remaining = Math.max(0, Math.ceil(target - (u?.elapsed ?? 0)));
   const scanning = u?.phase === 'scanning';
-  const msg = !u || u.phase === 'loading' ? 'عم نجهّز الكاميرا والموديل…' : u.phase === 'waiting-face' ? GUIDE['no-face'] : u.phase === 'analyzing' ? 'عم نحلل الإشارة…' : GUIDE[u.guidance];
-  const warn = u && (u.guidance !== 'ok' || u.phase === 'waiting-face') && u.phase !== 'loading';
+  const gate = u?.gate;
+  const gateMsg = gate ? (gate.code ? GATE_AR[gate.code] : `ممتاز — خليك هيك (${Math.max(0, Math.ceil(2 - gate.passFor))})`) : null;
+  const msg = !u || u.phase === 'loading' ? 'عم نجهّز الكاميرا والموديل…'
+    : u.phase === 'waiting-face' ? (gateMsg ?? GUIDE['no-face'])
+    : u.phase === 'analyzing' ? 'عم نحلل الإشارة…'
+    : u.extending ? 'الإشارة مش واضحة كفاية — بنكمّل كم ثانية كمان…'
+    : m === 'finger' ? 'خلّي إصبعك ثابت على الكاميرا والفلاش' : GUIDE[u.guidance];
+  const warn = u && ((gate && gate.code) || u.guidance !== 'ok' || u.extending) && u.phase !== 'loading';
   return (
     <>
       <div className="cam">
         <video ref={video} playsInline muted />
         <canvas ref={canvas} />
-        <div className="face-oval" style={{ opacity: scanning ? 0 : 1 }} />
+        {m === 'face' && <div className="face-oval" style={{ opacity: scanning ? 0 : 1 }} />}
         <div className="hud">
           <div className="hud-pill">
             <div className="row" style={{ gap: 8 }}>
@@ -257,6 +294,15 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
       </div>
       <div className="conf" style={{ height: 6 }}><i style={{ width: `${(u?.progress ?? 0) * 100}%`, background: 'var(--hr)', transition: 'width .3s linear' }} /></div>
       <Wave data={u?.wave ?? []} />
+      {gate && (
+        <div className="row wrap" style={{ gap: 6, justifyContent: 'center' }}>
+          {Object.entries(gate.checks).map(([k, ok]) => (
+            <span key={k} className="chip" style={{ color: ok ? 'var(--fu)' : 'var(--apt)' }}>{ok ? '✓' : '•'} {CHECK_AR[k] ?? k}</span>
+          ))}
+          {gate.lowFps && <span className="chip" style={{ color: 'var(--apt)' }}>الكاميرا بطيئة على هالجهاز</span>}
+        </div>
+      )}
+      {gate?.stuck && <button className="btn ghost block" onClick={() => engRef.current?.forceStart?.()}>ابدأ القياس على كل حال</button>}
       {debug && <DebugOverlay d={u?.debug} />}
       {u?.phase === 'error' && (
         <div className="err">ما قدرنا نفتح الكاميرا ({u.error}). تأكد إنك سمحت للمتصفح يستخدم الكاميرا وإن الرابط https.</div>
@@ -265,16 +311,26 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
   );
 }
 
-function Scan({ seconds, onDone }: { seconds: number; onDone: (v: VitalsResult) => void }) {
+const CHECK_AR: Record<string, string> = { close: 'المسافة', light: 'الإضاءة', exposure: 'السطوع', still: 'الثبات', frontal: 'الاتجاه', finger: 'الإصبع' };
+
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+function Scan({ seconds, onDone, mode = 'face' }: { seconds: number; onDone: (v: VitalsResult) => void; mode?: 'face' | 'finger' }) {
   return (
     <div className="screen" style={{ gap: 12 }}>
-      <CameraScan seconds={seconds} onDone={onDone} />
+      {mode === 'finger' && (
+        <div className="card">
+          <b>وضع الإصبع</b>
+          <p className="muted">{IOS ? 'غطّي الكاميرا الخلفية بإصبعك بهدوء، وخلّي ضو قوي (لمبة أو شباك) يضرب على إصبعك من فوق.' : 'غطّي الكاميرا والفلاش بإصبعك بهدوء. الفلاش رح يشتغل لحاله.'}</p>
+        </div>
+      )}
+      <CameraScan seconds={seconds} onDone={onDone} mode={mode} />
       <p className="muted" style={{ fontSize: 14, textAlign: 'center' }}>المربعات الخضرا هي مناطق الجلد اللي بنقرأ منها النبض — بتلمع على إيقاع النبض المقدَّر. المستطيل الأصفر بيلقط حركة التنفس.</p>
     </div>
   );
 }
 
-function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; refHr: string; setRefHr: (s: string) => void; onRetry: () => void; onNext: () => void }) {
+function VitalsView({ v, refHr, setRefHr, onRetry, onNext, fingerOffer }: { v: VitalsResult; refHr: string; setRefHr: (s: string) => void; onRetry: () => void; onNext: () => void; fingerOffer?: () => void }) {
   const poor = v.quality === 'poor';
   return (
     <div className="screen">
@@ -317,6 +373,7 @@ function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; 
         )}
       </div>
       <div className="row">
+        {fingerOffer && <button className="btn" onClick={fingerOffer}>جرّب بإصبعك</button>}
         <button className="btn ghost" onClick={onRetry}>إعادة</button>
         <button className="btn primary" style={{ flex: 1 }} onClick={onNext}>التالي: احكيلنا شو بتحس</button>
       </div>

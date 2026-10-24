@@ -72,6 +72,7 @@ def expectations(kind: str, status: int, text: str, level: str | None) -> list[s
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("--asr-url", default="http://127.0.0.1:8788")
     ap.add_argument("--api-url", default="http://127.0.0.1:8788")

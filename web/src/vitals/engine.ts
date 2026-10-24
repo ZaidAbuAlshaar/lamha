@@ -63,6 +63,7 @@ export function loadLandmarker(): Promise<FaceLandmarker> {
         baseOptions: { modelAssetPath: '/models/face_landmarker.task', delegate },
         runningMode: 'VIDEO' as const,
         numFaces: 1,
+        outputFacialTransformationMatrixes: true, // head pose for the hardened engine's frontal check
       });
       try {
         const lm = await FaceLandmarker.createFromOptions(files, opts('GPU'));
