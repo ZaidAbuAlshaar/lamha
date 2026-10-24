@@ -64,8 +64,8 @@ export function Breathing<T extends { beat_times_s?: number[]; quality: 'good' |
       </div>
       {res && <RsaChart r={res.rsa} />}
       {res && res.rsa.meanDiff != null && (
-        <p className="muted num" style={{ fontSize: 18 }}>
-          الفرق شهيق − زفير: {res.rsa.meanDiff.toFixed(1)} نبضة/دقيقة · {res.rsa.consistent} من {BREATH.breaths} أنفاس بنفس الاتجاه
+        <p className="muted">
+          الفرق بين الشهيق والزفير: <bdi dir="ltr" className="num">{res.rsa.meanDiff > 0 ? '+' : ''}{res.rsa.meanDiff.toFixed(1)}</bdi> نبضة/دقيقة · النبض أعلى بالشهيق في <bdi dir="ltr" className="num">{res.rsa.consistent}</bdi> من {BREATH.breaths} أنفاس
         </p>
       )}
       {!ok && <p className="muted">ممكن السبب حركة، ضو خفيف، أو النفس كان سريع. مش مشكلة — هاد تمرين بس، وقراءتك محفوظة زي ما هي.</p>}
@@ -93,9 +93,9 @@ function RsaChart({ r }: { r: RsaResult }) {
           <rect key={k} x={x(k * cyc)} y={padT} width={x(k * cyc + BREATH.inhale) - x(k * cyc)} height={H - padT - padB} fill="var(--hrv)" fillOpacity={0.14} />
         ))}
         <line x1={padL} x2={W - 4} y1={H - padB} y2={H - padB} stroke="var(--line-2)" />
-        <text x={padL - 4} y={y(hi) + 4} textAnchor="end" fontSize="10" fill="var(--muted)" fontFamily="var(--mono)">{hi}</text>
-        <text x={padL - 4} y={y(lo)} textAnchor="end" fontSize="10" fill="var(--muted)" fontFamily="var(--mono)">{lo}</text>
-        {[0, 5, 10, 15].map((s) => <text key={s} x={x(s)} y={H - 4} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="var(--mono)">{s}s</text>)}
+        <text x={padL - 4} y={y(hi) + 4} textAnchor="end" fontSize="12" fill="var(--muted)" fontFamily="var(--mono)">{hi}</text>
+        <text x={padL - 4} y={y(lo)} textAnchor="end" fontSize="12" fill="var(--muted)" fontFamily="var(--mono)">{lo}</text>
+        {[0, 5, 10, 15].map((s) => <text key={s} x={x(s)} y={H - 4} textAnchor="middle" fontSize="12" fill="var(--muted)" fontFamily="var(--mono)">{s}s</text>)}
         {pts && <polyline points={pts} fill="none" stroke="var(--hr)" strokeWidth="2" strokeLinejoin="round" />}
         {r.series.map((p, i) => <circle key={i} cx={x(p.t)} cy={y(p.hr)} r="2.5" fill="var(--hr)" />)}
       </svg>
