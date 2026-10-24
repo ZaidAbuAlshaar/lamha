@@ -64,7 +64,7 @@ export function Breathing<T extends { beat_times_s?: number[]; quality: 'good' |
       </div>
       {res && <RsaChart r={res.rsa} />}
       {res && res.rsa.meanDiff != null && (
-        <p className="muted num" style={{ fontSize: 16 }}>
+        <p className="muted num" style={{ fontSize: 18 }}>
           الفرق شهيق − زفير: {res.rsa.meanDiff.toFixed(1)} نبضة/دقيقة · {res.rsa.consistent} من {BREATH.breaths} أنفاس بنفس الاتجاه
         </p>
       )}
@@ -72,7 +72,7 @@ export function Breathing<T extends { beat_times_s?: number[]; quality: 'good' |
       <div className="spacer" />
       <button className="btn primary block" onClick={onNext}>التالي: احكيلنا شو بتحس</button>
       <button className="btn ghost block" onClick={() => { setElapsed(null); setRun((r) => r + 1); setMode('run'); }}>أعد التمرين</button>
-      <p className="disclaimer" style={{ fontSize: 16 }}>هاد التمرين ما بيدخل بالفرز ولا بينبعت كقياس.</p>
+      <p className="disclaimer" style={{ fontSize: 18 }}>هاد التمرين ما بيدخل بالفرز ولا بينبعت كقياس.</p>
     </div>
   );
 }
@@ -103,7 +103,7 @@ function RsaChart({ r }: { r: RsaResult }) {
         <span><i style={{ background: 'var(--hrv)', opacity: 0.4 }} />شهيق</span>
         <span><i style={{ background: 'var(--hr)' }} />النبض اللحظي (نبضة/دقيقة)</span>
       </div>
-      {r.series.length < 4 && <p className="muted" style={{ fontSize: 16 }}>عدد النبضات اللي لقطناها قليل ({r.beats}).</p>}
+      {r.series.length < 4 && <p className="muted" style={{ fontSize: 18 }}>عدد النبضات اللي لقطناها قليل ({r.beats}).</p>}
     </div>
   );
 }

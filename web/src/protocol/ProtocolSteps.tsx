@@ -31,7 +31,7 @@ export function ContextQuestions({ hasConditions, onDone }: { hasConditions: boo
       </div>
       <div className="spacer" />
       {i > 0 && <button className="btn ghost block" onClick={() => setI(i - 1)}>رجوع للسؤال اللي قبل</button>}
-      <p className="disclaimer" style={{ fontSize: 16 }}>الأجوبة بتساعد الطبيب يفهم قراءتك، مش بتغيّر النتيجة.</p>
+      <p className="disclaimer" style={{ fontSize: 18 }}>الأجوبة بتساعد الطبيب يفهم قراءتك، مش بتغيّر النتيجة.</p>
     </div>
   );
 }
@@ -57,7 +57,7 @@ export function MultiScan<T extends ScanLike & { quality_reasons?: string[] }>({
     <div className="screen proto" style={{ gap: 14 }}>
       <div className="row between wrap">
         <span className="proto-step">القراءة {d.next} من {d.target}</span>
-        <span className="muted" style={{ fontSize: 16 }}>محاولة {Math.min(MAX_SCANS, scans.length + (mode === 'scan' ? 1 : 0))} من {MAX_SCANS}</span>
+        <span className="muted" style={{ fontSize: 18 }}>محاولة {Math.min(MAX_SCANS, scans.length + (mode === 'scan' ? 1 : 0))} من {MAX_SCANS}</span>
       </div>
       {scans.length > 0 && <ReadingChips scans={scans} />}
       {mode === 'scan' ? (
@@ -111,7 +111,7 @@ export function ProtocolSummary({ v, ctx }: { v: Partial<ProtocolFields> & { hr_
         <div className="card stack">
           <div className="row between wrap">
             <b>{v.reading_count === 2 && v.protocol_method === 'mean2' ? 'معدل قراءتين متقاربات' : v.protocol_method === 'median' ? `الوسط من ${v.reading_count} قراءات` : v.reading_count === 1 ? 'قراءة وحدة بس' : 'ولا قراءة واضحة'}</b>
-            <span className="muted" style={{ fontSize: 16 }}>{v.scan_count} {v.scan_count === 1 ? 'محاولة' : 'محاولات'}</span>
+            <span className="muted" style={{ fontSize: 18 }}>{v.scan_count} {v.scan_count === 1 ? 'محاولة' : 'محاولات'}</span>
           </div>
           {v.readings.length > 0 && <div className="proto-chips">{v.readings.map((r, i) => <span key={i} className="ok"><b className="num">{Math.round(r)}</b> نبضة</span>)}</div>}
           {v.protocol_incomplete && <p className="apt">ما كمّلنا القراءتين المطلوبات — القراءة معلّمة للطبيب إنها ناقصة.</p>}

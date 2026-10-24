@@ -3,10 +3,10 @@
 .proto h2 { font-size: 26px; line-height: 1.35; }
 .proto .muted, .proto p { font-size: 18px; }
 .proto-step { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel-2); font-size: 18px; font-weight: 600; color: var(--text); }
-.proto-step small { font-size: 16px; color: var(--muted); font-weight: 400; }
-.proto-q { font-size: 30px; line-height: 1.35; margin: 8px 0 0; font-weight: 700; }
+.proto-step small { font-size: 18px; color: var(--muted); font-weight: 400; }
+.proto .proto-q { font-size: 30px; line-height: 1.35; margin: 8px 0 0; font-weight: 700; }
 .proto-answers { display: grid; gap: 14px; }
-.proto-answers .btn { min-height: 72px; font-size: 22px; width: 100%; }
+.proto .proto-answers .btn { min-height: 72px; font-size: 22px; width: 100%; }
 .proto .btn { min-height: 60px; font-size: 19px; }
 .proto-bad { border: 1px solid var(--emg); background: var(--panel); border-radius: var(--radius); padding: 14px 16px; }
 .proto-bad b { color: var(--emg); font-size: 20px; }
