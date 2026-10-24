@@ -226,7 +226,7 @@ def test_health_keeps_old_fields_and_adds_components(client):
     for k in ("reachable", "ready", "model", "error"):
         assert k in h["llm"]
     assert h["llm"]["ready"] is True
-    assert set(h["components"]) == {"whisper", "gemma", "rules", "database", "tunnel"}
+    assert {"whisper", "gemma", "rules", "database", "tunnel"} <= set(h["components"])  # v2 modules add more
     for comp in h["components"].values():
         assert comp["status"] in ("ok", "degraded", "down")
         assert {"loaded", "warm", "last_latency_ms", "detail"} <= set(comp)

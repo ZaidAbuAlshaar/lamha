@@ -124,6 +124,15 @@ def health_route():
         "database": health.database_component(store),
         "tunnel": health.tunnel_component(),
     }
+    # v2 components: each feature module exposes health(); a missing or failing module reports "down" instead of breaking /api/health.
+    import importlib
+    for key, mod in (("websocket_alerts", "alerts"), ("chronos", "forecast"), ("piper_tts", "tts")):
+        try:
+            components[key] = importlib.import_module(mod).health()
+        except ModuleNotFoundError:
+            components[key] = {"status": "down", "loaded": False, "warm": False, "last_latency_ms": None, "detail": "not installed in this build"}
+        except Exception as e:
+            components[key] = {"status": "down", "loaded": False, "warm": False, "last_latency_ms": None, "detail": f"{type(e).__name__}: {e}"[:200]}
     return {"ok": True, "whisper": dict(asr.state), "llm": ls, "version": VERSION, "components": components}
 
 
