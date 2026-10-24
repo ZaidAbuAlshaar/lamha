@@ -38,7 +38,7 @@
 
 | Model | Licence | Role | Without it |
 |---|---|---|---|
-| **Gemma 4 E4B** (`gemma4:e4b-it-qat`, local via Ollama) | Apache-2.0 | Turns dialect speech into typed symptoms with verbatim quotes; writes the bilingual doctor summary and patient advice; suggests a triage level (escalate-only) | The doctor reads raw transcripts. Triage falls back to the keyword lexicon, which catches only red flags. |
+| **Gemma 4 E4B** (`gemma4:e4b-it-qat`, local via Ollama) | Apache-2.0 | Turns dialect speech into typed symptoms with verbatim quotes; writes the bilingual doctor summary and patient advice; suggests a triage level (escalate-only) | The doctor reads raw transcripts. Triage falls back to the keyword lexicon, which **misses dialect phrasings like «حاسس صدري تقيل»** (measured: followup instead of emergency). |
 | **Whisper large-v3** (faster-whisper, CUDA int8_float16) | MIT | Jordanian-Arabic speech to text, so elderly or low-literacy patients can talk instead of type | The patient must type |
 | **MediaPipe Face Landmarker** | Apache-2.0 | 478-point face mesh to place the skin regions every frame | rPPG has no stable skin region and fails under head motion |
 
@@ -70,6 +70,7 @@ The same Gemma 4 E4B model was measured earlier the same day in our team's bake-
 | HRV vs noise (synthetic) | RMSSD is 8 ms with no noise; noise inflates it (43 ms at 12 dB SNR) → stress gated at SNR ≥ 10 dB | same file, noise sweep |
 | **End-to-end: synthetic face videos with known pulse and breathing, fed as the camera into the real app (headless Chrome)** | **72 → 72.3 bpm and 96 → 95.7 bpm; RR 15 → 15 and 20 → 20; quality "good". A no-pulse control comes back "poor" with confidence 0** | `eval/e2e/` |
 | HRV on the same videos | **Not reliable:** RMSSD read 21 / 12.4 ms vs ~3.5 / ~1.7 ms true → stress labelled experimental and kept out of triage | `eval/e2e/README.md` |
+| **AI vs rules (why the model matters)** | «حاسس صدري تقيل» and «صدري مقبوض وعم بعرق»: rules alone → followup; with Gemma's verified extraction → **emergency**. A mild headache stays followup | `eval/llm/ai_vs_rules.json` |
 | LLM smoke: 5 synthetic Arabic check-ins through Gemma 4 | 13/13 spans verified; 5/5 numbers verified; injection case still emergency; warm latency 4.8–7.6 s | `eval/llm/` |
 | Server unit tests (incl. dialect false-alarm cases) | 69 passed | `server/tests/` |
 | Whisper on GPU | 4.2 s clip (webm/opus) transcribed in 1.4 s | measured via `/api/transcribe` |

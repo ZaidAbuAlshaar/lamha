@@ -23,3 +23,18 @@ Notes (honest limits):
   the chest-pain lexicon rule fires in code and the AI can only escalate, never downgrade (see `server/tests`).
 - The glucose rule (patient-reported value ≥250 or ≤70 → appointment) is a code rule added after the first run
   triaged "sugar 320" as followup.
+
+
+## Does the model add anything over the keyword rules? (`ai_vs_rules.py`, Simulated)
+
+Phrases the lexicon does not contain, run through the real pipeline (rules + Gemma 4 E4B + guards), no DB writes:
+
+| patient said | rules only | rules + Gemma | how |
+|---|---|---|---|
+| حاسس صدري تقيل من الصبح | followup | **emergency** | Gemma extracted `chest_pain` quoting «حاسس صدري تقيل» (verified in transcript) → code red flag |
+| صدري مقبوض وعم بعرق كثير | followup | **emergency** | `chest_pain` quoting «صدري مقبوض» (verified) → code red flag |
+| قلبي عم يدق بسرعة وحاسس حالي رح يغمى علي | emergency | emergency | lexicon already catches fainting; Gemma adds `palpitations` |
+| راسي بيوجعني شوي من قلة النوم | followup | followup | no over-triage on a mild headache |
+
+In rows 1–2, Gemma's own triage suggestion was followup. The escalation came from its grounded extraction plus
+the code rule. That is the design: the model reads the dialect, and the code makes the decision. n = 4 developer-written cases.
