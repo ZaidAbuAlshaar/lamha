@@ -21,6 +21,14 @@ All behaviour added in the hardening pass is behind one of these. Defaults are w
 | `NAZRA_DEV_RECORDING` | `0` | `1` enables `POST/GET /api/dev/recordings` (ground-truth videos). Off = every route 404s. |
 | `NAZRA_REC_DIR` | `D:\nazra-recordings` | Where dev recordings go (`<id>.<ext>` + `<id>.json`). Refused (HTTP 500) if it resolves inside the repo. Videos are never served back. |
 | `NAZRA_REC_MAX_MB` | `200` | Max size of one dev recording upload (HTTP 413 above). |
+| `NAZRA_MONITOR` | `1` | Monitoring engine (`monitor.py`): daily medians, robust baseline (median of last 7–14 good days excl. last 3, SD = 1.4826·MAD ≥ 3), robust z ≥ 3 → «أعد القياس», upper CUSUM (k 0.5, h 4) → may raise followup → appointment only. Also `GET /api/patients/{id}/forecast`. `0` = no bump, endpoint 404. |
+| `NAZRA_CHRONOS` | `1` | Chronos-Bolt cross-check of the linear forecast via a persistent CPU subprocess worker. `0` = linear only (with a note). |
+| `NAZRA_CHRONOS_PY` | `D:
+azra-chronos-venv\Scripts\python.exe` | Separate torch venv for the worker (server venv stays torch-free). |
+| `NAZRA_CHRONOS_MODEL` | `amazon/chronos-bolt-small` | Falls back to `amazon/chronos-bolt-tiny`. Weights in `HF_HOME`, offline. |
+| `NAZRA_CHRONOS_TIMEOUT_S` | `60` | Per-prediction timeout (start-up: 2×). On failure → linear only. |
+| `NAZRA_FORECAST_NOTE_AI` | `1` | Gemma doctor trend note (20 s, temp 0, think off). Numbers guard (±1 vs facts, spelled-out numbers rejected, no forecast numbers, no probabilities) → else fixed template. `0` = template only. |
+| `NAZRA_DEMO_TEAM_HR` | `70` | Centre HR for the «عضو الفريق (مؤقت)» demo profile (`demo/monitor.py`). |
 | `HF_HOME` / `HF_HUB_OFFLINE` | `D:\models\hf` / `1` | Whisper model cache; offline. |
 
 ## `/api/health`

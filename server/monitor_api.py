@@ -1,6 +1,9 @@
 """GET /api/patients/{id}/forecast — monitoring + forecast card for the doctor (and a calm patient sentence)."""
 from __future__ import annotations
 
+import os
+import threading
+
 from fastapi import APIRouter, HTTPException
 
 import core
@@ -9,6 +12,10 @@ import monitor
 import store
 
 router = APIRouter()
+
+# Warm the Chronos worker in the background so the first doctor view is not slow (never in tests / NO_MODELS).
+if os.environ.get("NAZRA_NO_MODELS") != "1" and forecast.chronos_enabled():
+    threading.Thread(target=forecast.warm, name="chronos-warm", daemon=True).start()
 
 
 def _points(checkins: list[dict]) -> list[dict]:
