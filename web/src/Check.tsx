@@ -56,7 +56,7 @@ export default function Check() {
     const { diagnostics: _d, diagnostics_id, beat_times_s: _bt, ...rest } = vitals as ScanResult;
     const v: Vitals = { ...rest, ref_hr_bpm: Number.isFinite(ref) && ref > 30 && ref < 220 ? ref : null, ...contextFields(ctx, rest.quality) };
     try {
-      setCheckin(await api.checkin({ patient_id: patient.id, vitals: v, transcript, transcript_source: source, diagnostics_id }));
+      setCheckin(await api.checkin({ patient_id: patient.id, vitals: v, transcript, transcript_source: source, diagnostics_id, voice_markers: source === 'voice' ? lastVoiceMarkers : null }));
       setStep('result');
     } catch (e) {
       setSendErr(e instanceof Error ? e.message : String(e));
@@ -221,6 +221,7 @@ const GUIDE: Record<string, string> = {
 };
 
 let scanAttempt = 0;
+let lastVoiceMarkers: Record<string, unknown> | null = null;
 
 const GATE_AR: Record<GateCode, string> = {
   'no-face': 'وجّه الكاميرا على وجهك',
@@ -453,6 +454,7 @@ function Voice({ onSend }: { onSend: (t: string, src: Checkin['transcript_source
         try {
           const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
           const r = await api.transcribe(blob);
+          lastVoiceMarkers = r.voice_markers ?? null; // v2 insights: pauses / words per breath / speech rate
           setText(r.text.trim());
           setSrc('voice');
           setMode('review');

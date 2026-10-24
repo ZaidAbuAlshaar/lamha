@@ -6,6 +6,8 @@ $env:HF_HOME = "D:\models\hf"
 $env:HF_HUB_OFFLINE = "1"
 if (-not $env:NAZRA_LLM) { $env:NAZRA_LLM = "gemma4:e4b-it-qat" }
 if (-not $env:NAZRA_FREE_VRAM) { $env:NAZRA_FREE_VRAM = "1" }
+# Hackathon demo timings: partner-center alert escalates after 30 s without an ack (production default 180 s).
+if (-not $env:NAZRA_DEMO) { $env:NAZRA_DEMO = "1" }
 $Py = "D:\videos\tools\whisper-venv\Scripts\python.exe"
 Write-Host "Nazra server -> http://0.0.0.0:8787  (LLM: $($env:NAZRA_LLM))"
 & $Py -m uvicorn app:app --app-dir "$ServerDir" --host 0.0.0.0 --port 8787
