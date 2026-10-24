@@ -18,6 +18,7 @@ export const FLAG_DEFAULTS = {
   fingertip: true, // offer rear-camera + torch fingertip mode after 2 failed scans
   qualityScore: true, // composite 0–1 quality score
   diagnostics: true, // send a numbers-only diagnostics record per scan
+  forecastCard: true, // doctor «توقّع صحة المريض» card (monitor engine + forecast)
 };
 
 export type Flags = typeof FLAG_DEFAULTS;
