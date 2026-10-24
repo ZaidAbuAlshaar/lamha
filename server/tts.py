@@ -24,7 +24,7 @@ ENGINE = os.environ.get("NAZRA_TTS_ENGINE", "edge")
 EDGE_EXE = Path(os.environ.get("NAZRA_EDGE_TTS_EXE", "D:/nazra-ttsenv/Scripts/edge-tts.exe"))
 EDGE_VOICE = os.environ.get("NAZRA_EDGE_VOICE", "ar-JO-TaimNeural")
 EDGE_RATE = os.environ.get("NAZRA_EDGE_RATE", "-6%")
-WARM_TEXT = "أهلاً، هذا تقرير نظرة."
+WARM_TEXT = "أهلاً، هذا تقرير لمحة."
 
 state = {"warm": False, "last_latency_ms": None, "error": None, "cache_hits": 0, "synth_count": 0}
 _lock = threading.Lock()

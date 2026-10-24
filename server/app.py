@@ -1,4 +1,4 @@
-"""Nazra clinic server (FastAPI, port 8787). Triage aid — not a diagnosis."""
+"""Lamha clinic server (FastAPI, port 8787). Triage aid — not a diagnosis."""
 from __future__ import annotations
 
 import json
@@ -84,7 +84,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="Nazra", version=VERSION, lifespan=lifespan)
+app = FastAPI(title="Lamha", version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -115,6 +115,7 @@ app.include_router(__import__("insights_api").router)  # insights
 app.include_router(alerts_api.router)
 import monitor_api; app.include_router(monitor_api.router)  # noqa: E402,E702
 import report_api; app.include_router(report_api.router)  # noqa: E402,E702  (report)
+import chat_api; app.include_router(chat_api.router)  # noqa: E402,E702  (patient chatbot «اسأل لمحة»)
 
 
 @app.get("/api/health")

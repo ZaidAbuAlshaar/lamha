@@ -1,7 +1,7 @@
 // Single source of truth for the product name. The brand board's wordmark reads «لمحة / LAMHA»;
-// the product currently ships as «نظرة / Nazra». To rename: change these two strings, then run
+// the product ships as «لمحة / Lamha» (renamed from «نظرة / Nazra» on 2026-10-24). To rename: change these two strings, then run
 // `node src/brand/sync-name.mjs` (from nazra/web) to update index.html <title>/splash + the manifest.
-export const BRAND = { nameAr: 'نظرة', nameEn: 'Nazra' } as const;
+export const BRAND = { nameAr: 'لمحة', nameEn: 'Lamha' } as const;
 
 /** Exact brand-board palette (logo assets). Theme tokens live in styles.css :root. */
 export const BRAND_COLORS = {

@@ -1,10 +1,10 @@
-# نظرة · Nazra: a daily health check-in from a phone camera in 30 seconds
+# لمحة · Lamha: a daily health check-in from a phone camera in 30 seconds
 
 **Track:** Digital Health & Wellness. The track asks for apps that find problems before they arise, such as remote health-centre check-ins.
 **Built at:** Hacktoberfest Hack Day Amman x JOSA, 2026-10-24. Every row in the demo data is synthetic and labelled «بيانات تجريبية».
 
 > A patient (at home, in a village, in a camp) holds a phone to their face for two 30-second readings and then says what hurts in Jordanian Arabic.
-> Nazra estimates heart rate and breathing from the camera, **on the phone**, and turns the speech into verified symptoms.
+> Lamha estimates heart rate and breathing from the camera, **on the phone**, and turns the speech into verified symptoms.
 > It compares the reading with **the patient's own baseline**. When a rise is sustained, it tells the doctor «يستحق مراجعة الطبيب».
 > In an emergency, the patient sees «اتصل بـ 911» first, and an alert goes to the nearest partner health centre, which has to acknowledge it.
 >

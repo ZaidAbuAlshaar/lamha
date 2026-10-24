@@ -10,6 +10,7 @@ import EmergencyStatus from './EmergencyStatus'; // v2 center
 import { ContextQuestions, MultiScan, ProtocolSummary, ReminderButton } from './protocol/ProtocolSteps';
 import { Breathing } from './protocol/BreathingCheck';
 import { contextFields, type CheckContext } from './protocol/context';
+import Chat from './Chat'; // patient chatbot «اسأل لمحة»
 
 export type ScanResult = VitalsResult & { diagnostics_id?: string | null };
 
@@ -115,7 +116,7 @@ function Home({ onStart }: { onStart: () => void }) {
   return (
     <div className="screen">
       <div className="hero-monitor">
-        <h1>فحص صحي بنظرة.<br /><span className="hr">30 ثانية</span> قدّام كاميرا موبايلك.</h1>
+        <h1>فحص صحي بلمحة.<br /><span className="hr">30 ثانية</span> قدّام كاميرا موبايلك.</h1>
         <p className="lead" style={{ marginTop: 10 }}>بدون أي جهاز طبي: النبض، التنفس، ومؤشر التوتر — وبتحكي شو بيوجعك بلهجتك، والملخص بيوصل لطبيبك.</p>
         <div style={{ marginTop: 16 }}><Wave data={wave} height={70} /></div>
         <div className="hero-vitals">
@@ -133,7 +134,7 @@ function Home({ onStart }: { onStart: () => void }) {
           <li><span className="n">3</span><div><b>بتعرف خطوتك الجاي</b><p className="muted">طارئ، موعد، أو متابعة — والطبيب بيشوف ملخصك ومنحنى حالتك.</p></div></li>
         </ol>
       </div>
-      <p className="disclaimer">نظرة أداة فرز ومتابعة، مش تشخيص طبي. بالحالات الطارئة اتصل 911.</p>
+      <p className="disclaimer">لمحة أداة فرز ومتابعة، مش تشخيص طبي. بالحالات الطارئة اتصل 911.</p>
     </div>
   );
 }
@@ -385,7 +386,7 @@ function VitalsView({ v, refHr, setRefHr, onRetry, onNext, fingerOffer, extra }:
       </div>
       <div className="card stack">
         <h3>عندك ساعة ذكية أو جهاز نبض؟ (اختياري)</h3>
-        <p className="muted" style={{ fontSize: 14 }}>اكتب الرقم اللي عليه هلّق — بنستخدمه بس لقياس دقة نظرة بشكل شفاف.</p>
+        <p className="muted" style={{ fontSize: 14 }}>اكتب الرقم اللي عليه هلّق — بنستخدمه بس لقياس دقة لمحة بشكل شفاف.</p>
         <input className="input num" style={{ textAlign: 'right' }} inputMode="numeric" placeholder="مثلاً 74" value={refHr} onChange={(e) => setRefHr(e.target.value.replace(/[^\d.]/g, '').slice(0, 5))} />
         {refHr && v.hr_bpm != null && Number.isFinite(parseFloat(refHr)) && (
           <p className="num" style={{ textAlign: 'right' }}>Δ = {Math.abs(v.hr_bpm - parseFloat(refHr)).toFixed(1)} bpm</p>
@@ -583,6 +584,7 @@ function Result({ c, onAgain }: { c: Checkin; onAgain: () => void }) {
       <button className="btn block" onClick={onAgain}>فحص جديد</button>
       <ReminderButton />
       <p className="disclaimer">أداة فرز مش تشخيص · الموديل: {c.ai.ok ? c.ai.model : 'قواعد فقط'}</p>
+      <Chat checkinId={c.id} />
     </div>
   );
 }

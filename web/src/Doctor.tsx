@@ -386,14 +386,14 @@ function Accuracy() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <div className="card">
-          <h3>نظرة (rPPG) مقابل المرجع</h3>
+          <h3>لمحة (rPPG) مقابل المرجع</h3>
           <svg viewBox={`0 0 ${W} ${W}`} style={{ width: '100%', direction: 'ltr' }}>
             <rect x={P} y={P} width={W - 2 * P} height={W - 2 * P} fill="none" stroke="var(--line)" />
             <line x1={s(lo)} y1={W - s(lo)} x2={s(hi)} y2={W - s(hi)} stroke="var(--dim)" strokeDasharray="4 4" />
             <polygon points={`${s(lo)},${W - s(lo + 5)} ${s(hi - 5)},${W - s(hi)} ${s(hi)},${W - s(hi)} ${s(hi)},${W - s(hi - 5)} ${s(lo + 5)},${W - s(lo)} ${s(lo)},${W - s(lo)}`} fill="var(--hr)" opacity=".06" />
             {pairs.map((p) => <circle key={p.checkin_id} cx={s(p.ref)} cy={W - s(p.rppg)} r="5" fill={p.quality === 'poor' ? 'var(--emg)' : 'var(--hr)'} opacity=".85" />)}
             <text x={W / 2} y={W - 6} textAnchor="middle" fill="var(--muted)" fontSize="11">reference (bpm)</text>
-            <text x={10} y={W / 2} fill="var(--muted)" fontSize="11" transform={`rotate(-90 10 ${W / 2})`} textAnchor="middle">Nazra (bpm)</text>
+            <text x={10} y={W / 2} fill="var(--muted)" fontSize="11" transform={`rotate(-90 10 ${W / 2})`} textAnchor="middle">Lamha (bpm)</text>
             <text x={P} y={W - P + 14} fill="var(--dim)" fontSize="10">{lo}</text>
             <text x={W - P} y={W - P + 14} fill="var(--dim)" fontSize="10" textAnchor="end">{hi}</text>
           </svg>
@@ -403,7 +403,7 @@ function Accuracy() {
           <h3>القراءات</h3>
           {!pairs.length ? <p className="empty">لسا ما في قراءات مرجعية. بعد الفحص، اكتب رقم ساعتك بخانة «عندك ساعة ذكية؟».</p> : (
             <table className="vt">
-              <thead><tr><th>الوقت</th><th>نظرة</th><th>المرجع</th><th>الفرق</th><th>الجودة</th></tr></thead>
+              <thead><tr><th>الوقت</th><th>لمحة</th><th>المرجع</th><th>الفرق</th><th>الجودة</th></tr></thead>
               <tbody>
                 {pairs.slice().reverse().map((p) => (
                   <tr key={p.checkin_id}>

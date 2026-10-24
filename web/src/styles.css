@@ -1,4 +1,4 @@
-/* Nazra: calm, warm, elderly-friendly. Token VALUES are owned by the brand workstream
+/* Lamha: calm, warm, elderly-friendly. Token VALUES are owned by the brand workstream
    (see src/brand/TOKENS.md for roles + WCAG contrast). Names are fixed by docs/CONTRACTS-v2.md.
    Light is the default; dark = deep warm charcoal. Switch: prefers-color-scheme, overridden by
    html[data-theme="light"|"dark"] (set by the theme toggle, persisted in localStorage). */

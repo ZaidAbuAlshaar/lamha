@@ -85,7 +85,7 @@ function Picker({ centers }: { centers: CenterInfo[] }) {
   return (
     <div className="cc" dir="rtl">
       <div className="cc-demo">تجريبي — مركز شريك وهمي</div>
-      <h1 className="cc-title">نظرة · لوحة المركز الصحي الشريك</h1>
+      <h1 className="cc-title">لمحة · لوحة المركز الصحي الشريك</h1>
       <p className="cc-muted">اختار المركز اللي هالجهاز بيمثّله:</p>
       <div className="cc-pick">
         {centers.map((c) => (
@@ -261,7 +261,7 @@ function Console({ me }: { me: CenterInfo }) {
           )}
         </>
       )}
-      <p className="cc-foot">نظرة / Nazra · أداة فرز مش تشخيص · بيانات تجريبية</p>
+      <p className="cc-foot">لمحة / Lamha · أداة فرز مش تشخيص · بيانات تجريبية</p>
     </div>
   );
 }

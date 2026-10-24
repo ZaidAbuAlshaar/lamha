@@ -31,6 +31,8 @@ azra-chronos-venv\Scripts\python.exe` | Separate torch venv for the worker (serv
 | `NAZRA_CHRONOS_TIMEOUT_S` | `60` | Per-prediction timeout (start-up: 2×). On failure → linear only. |
 | `NAZRA_FORECAST_NOTE_AI` | `1` | Gemma doctor trend note (20 s, temp 0, think off). Numbers guard (±1 vs facts, spelled-out numbers rejected, no forecast numbers, no probabilities) → else fixed template. `0` = template only. |
 | `NAZRA_DEMO_TEAM_HR` | `70` | Centre HR for the «عضو الفريق (مؤقت)» demo profile (`demo/monitor.py`). |
+| `NAZRA_CHAT` | `1` | Patient chatbot «اسأل لمحة»: `POST /api/chat {checkin_id?, messages}` → `{reply_ar, source: rules|ai|ai-cloud|template, red_flag, cards}`, `GET /api/chat/health`. Red flag in the last user message (`core.lexicon_scan`) → fixed 911 reply + card `call_911_if_ar` lines verbatim, no model. Else local Gemma (temp 0.3, think off, 20 s, last 8 messages) with code-built facts only → `llm_cloud.chat` (same cap/key, max_tokens 350) → template. Every sentence passes the dose/medicine guard + a vitals-number guard (number near نبض/تنفس/ضغط/سكر/bpm not in the facts → dropped); all dropped → template. `0` = 404. |
+| `NAZRA_CHAT_TIMEOUT_S` | `20` | Per-call timeout for the chatbot's local and cloud model calls. |
 | `HF_HOME` / `HF_HUB_OFFLINE` | `D:\models\hf` / `1` | Whisper model cache; offline. |
 
 ## `/api/health`

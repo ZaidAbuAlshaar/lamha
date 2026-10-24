@@ -1,4 +1,4 @@
-# Nazra design tokens (brand workstream)
+# Lamha design tokens (brand workstream)
 
 Generated from `src/styles.css` by computing WCAG 2.x relative-luminance contrast (no estimates).
 Names are fixed by `docs/CONTRACTS-v2.md`; values below are the source of truth.

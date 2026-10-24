@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Brand, Qr } from './components';
 import { getFlags } from './config';
 import './report.css';
+import Chat from './Chat'; // patient chatbot «اسأل لمحة»
 
 type Level = 'emergency' | 'appointment' | 'followup';
 
@@ -248,9 +249,10 @@ export default function Report({ id }: { id: string }) {
             </section>
           )}
 
-          <p className="disclaimer rep-disc">{rep.disclaimer_ar} · نظرة / Nazra</p>
+          <p className="disclaimer rep-disc">{rep.disclaimer_ar} · لمحة / Lamha</p>
         </div>
       )}
+      <Chat checkinId={id} />
     </div>
   );
 }

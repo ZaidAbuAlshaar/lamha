@@ -177,7 +177,7 @@ export default function DevRecord() {
   return (
     <div className="app" dir="rtl">
       <div className="topbar">
-        <span className="brand">نظرة · تسجيل للتطوير</span>
+        <span className="brand">لمحة · تسجيل للتطوير</span>
         <span className="chip">dev</span>
       </div>
 

@@ -195,7 +195,7 @@ def qr_payload(c: dict, patient: dict | None, level: str) -> str:
 
     flags = ", ".join(r.get("label_ar", r.get("code", "")) for r in c.get("red_flags") or []) or "لا يوجد"
     lines = [
-        "NAZRA نظرة",
+        "NAZRA لمحة",
         f"الاسم: {p.get('name_ar') or c.get('patient_name_ar') or '—'}",
         f"العمر: {p.get('age') if p.get('age') is not None else '—'}",
         f"الوقت: {_fmt_time(c.get('created_at'))}",
@@ -227,7 +227,7 @@ def _sources(cs: list[dict]) -> list[dict]:
 
 
 def _speech(level: str, next_step: str, vit: list[dict], do_now: list[str], call911: list[str]) -> str:
-    parts = [f"تقرير نظرة. النتيجة: {LEVEL_AR.get(level, level)}.", next_step]
+    parts = [f"تقرير لمحة. النتيجة: {LEVEL_AR.get(level, level)}.", next_step]
     for x in vit:
         if x["value"] is not None and x["usable"]:
             parts.append(f"{x['label_ar']} {x['value']} {x['unit_ar']}، {x['meaning_ar']}")
@@ -268,7 +268,7 @@ def build_report(c: dict, patient: dict | None, prev: list[dict] | None = None) 
         return {**base, "minimal": True, "summary_ar": None, "summary_source": None, "vitals": [], "do_now_ar": [],
                 "call_911_if_ar": [], "questions_for_doctor_ar": [], "change_vs_baseline_ar": None, "sources": [],
                 "dropped_advice": [], "speech_ar": f"{NEXT_STEP_AR['emergency']} {DISCLAIMER_AR}.",
-                "share_text_ar": f"نظرة — {name or ''}: {LEVEL_AR['emergency']}. {NEXT_STEP_AR['emergency']}"}
+                "share_text_ar": f"لمحة — {name or ''}: {LEVEL_AR['emergency']}. {NEXT_STEP_AR['emergency']}"}
 
     matched = match_cards(c)
     by_id = {m["id"]: m for m in matched}
@@ -284,7 +284,7 @@ def build_report(c: dict, patient: dict | None, prev: list[dict] | None = None) 
         next_step = POOR_SCAN_NEXT_AR
     hr = next((x["value"] for x in vit if x["key"] == "hr" and x["usable"]), None)
     rr = next((x["value"] for x in vit if x["key"] == "rr" and x["usable"]), None)
-    share = f"نظرة — {name or ''}: {LEVEL_AR.get(level, level)}. {next_step}"
+    share = f"لمحة — {name or ''}: {LEVEL_AR.get(level, level)}. {next_step}"
     if hr is not None or rr is not None:
         share += f" النبض {hr if hr is not None else '--'}، التنفس {rr if rr is not None else '--'}."
     share += f" {DISCLAIMER_AR}."

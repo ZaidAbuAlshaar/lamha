@@ -88,7 +88,7 @@ def extract(transcript: str, patient: dict, computed: dict, timeout_s: float | N
         _save_usage(u)
     try:
         r = httpx.post("https://openrouter.ai/api/v1/chat/completions", timeout=timeout_s or 25, headers={
-            "Authorization": f"Bearer {key()}", "X-Title": "Nazra clinic (hackathon demo)"}, json={
+            "Authorization": f"Bearer {key()}", "X-Title": "Lamha clinic (hackathon demo)"}, json={
             "model": model(), "temperature": 0, "seed": 42, "max_tokens": 900,
             "response_format": {"type": "json_schema", "json_schema": {"name": "extraction", "strict": True, "schema": llm.SCHEMA}},
             "provider": {"data_collection": "deny"},  # ask OpenRouter to route only to providers that don't retain prompts
@@ -125,6 +125,55 @@ def extract(transcript: str, patient: dict, computed: dict, timeout_s: float | N
     state.update(last_latency_ms=ms, last_error=None)
     state["calls_ok"] += 1
     return {"ok": True, "data": data, "latency_ms": ms, "error": None, "error_detail": None, "model": label}
+
+
+def chat(messages: list[dict], timeout_s: float | None = None) -> dict:
+    """Patient chatbot fallback (chat.py). Same key handling + daily cap as extract().
+    -> {'ok','text','latency_ms','error','model'}; never raises."""
+    t0 = time.perf_counter()
+    label = f"openrouter:{model()} (chat fallback)"
+
+    def fail(code, detail):
+        state["calls_failed"] += 1
+        state["last_error"] = f"chat {code}: {detail}"[:200]
+        return {"ok": False, "text": None, "latency_ms": int((time.perf_counter() - t0) * 1000), "error": code,
+                "model": label}
+
+    if not enabled():
+        return fail("disabled", "no OPENROUTER_API_KEY or NAZRA_CLOUD_FALLBACK=0")
+    with _lock:
+        u = _usage()
+        if u["calls"] >= daily_cap():
+            return fail("budget", f"daily cap {daily_cap()} reached")
+        u["calls"] += 1
+        _save_usage(u)
+    try:
+        r = httpx.post("https://openrouter.ai/api/v1/chat/completions", timeout=timeout_s or 20, headers={
+            "Authorization": f"Bearer {key()}", "X-Title": "Lamha clinic (hackathon demo)"}, json={
+            "model": model(), "temperature": 0.3, "max_tokens": 350,
+            "provider": {"data_collection": "deny"}, "messages": messages})
+        r.raise_for_status()
+        body = r.json()
+        text = (body["choices"][0]["message"]["content"] or "").strip()
+        usage = body.get("usage") or {}
+        with _lock:
+            u = _usage()
+            u["prompt_tokens"] += int(usage.get("prompt_tokens") or 0)
+            u["completion_tokens"] += int(usage.get("completion_tokens") or 0)
+            u["cost_usd"] = round(u.get("cost_usd", 0.0) + float(usage.get("cost") or 0.0), 6)
+            _save_usage(u)
+    except httpx.TimeoutException as e:
+        return fail("timeout", e)
+    except httpx.HTTPStatusError as e:
+        return fail("http_error", f"{e.response.status_code}")
+    except Exception as e:
+        return fail("error", f"{type(e).__name__}: {e}")
+    if not text:
+        return fail("empty", "no content")
+    ms = int((time.perf_counter() - t0) * 1000)
+    state.update(last_latency_ms=ms, last_error=None)
+    state["calls_ok"] += 1
+    return {"ok": True, "text": text, "latency_ms": ms, "error": None, "model": label}
 
 
 def with_fallback(local_fn, cloud_timeout_s: float = 25):

@@ -26,6 +26,7 @@ export const FLAG_DEFAULTS = {
   dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
   forecastCard: true, // doctor «توقّع صحة المريض» card (monitor engine + forecast)
   report: true, // patient report page «تقريري» (#/report/<checkinId>) with TTS, print/PDF, QR
+  chat: true, // patient chatbot «اسأل لمحة» on Result + Report (POST /api/chat)
 };
 
 export type Flags = typeof FLAG_DEFAULTS;

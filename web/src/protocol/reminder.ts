@@ -29,14 +29,14 @@ export function fold(line: string): string {
   return out.join('\r\n ');
 }
 
-export const REMINDER_TITLE = 'فحص نظرة اليومي';
+export const REMINDER_TITLE = 'فحص لمحة اليومي';
 
 export function buildIcs(now: Date = new Date(), url = ''): string {
-  const desc = `افتح نظرة واعمل فحصك اليومي (30 ثانية قدام الكاميرا).${url ? ` ${url}` : ''}`;
+  const desc = `افتح لمحة واعمل فحصك اليومي (30 ثانية قدام الكاميرا).${url ? ` ${url}` : ''}`;
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Nazra//Daily check-in//AR',
+    'PRODID:-//Lamha//Daily check-in//AR',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

@@ -1,4 +1,4 @@
-"""Nazra deterministic core: Arabic normalization, red-flag lexicon, vitals rules,
+"""Lamha deterministic core: Arabic normalization, red-flag lexicon, vitals rules,
 trend alerts, code guards (span + numbers), triage merge and template summaries.
 
 Everything here is plain code. The LLM can only ESCALATE triage, never downgrade it.
