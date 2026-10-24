@@ -59,6 +59,7 @@ export interface Checkin {
   triage: { level: Level; rule_level: Level; ai_level: Level | null; reasons_ar: string[]; reasons_en: string[] };
   ai: { ok: boolean; model: string; summary_ar: string; summary_en: string; advice_ar: string; numbers_verified: boolean; latency_ms: number; error: string | null };
   review: { decision: 'confirm' | 'override'; final_level: Level; note: string; reviewed_at: string } | null;
+  alert_id?: string | null; // v2 center: partner-center alert for emergencies
 }
 
 export interface HistoryPoint { date: string; hr: number | null; rr: number | null; stress: number | null }
