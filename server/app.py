@@ -282,6 +282,11 @@ def create_checkin(body: dict = Body(...)):
     for k in ("voice_markers", "context"):  # insights: keep client voice markers/context (pipeline drops unknown vitals keys)
         if isinstance(body.get(k) or (body.get("vitals") or {}).get(k), dict):
             c["vitals"][k] = _numbers_only(body.get(k) or body["vitals"][k])
+    bv = body.get("vitals") or {}
+    for k in ("readings", "reading_count", "scan_count", "excluded_from_baseline", "quality_score", "quality_components",
+              "quality_reasons"):  # v2 protocol/quality fields (numbers, bools, short codes only)
+        if k in bv:
+            c["vitals"][k] = _numbers_only(bv[k])
     if body.get("diagnostics_id"):
         c["diagnostics_id"] = str(body["diagnostics_id"])[:20]
     store.put_checkin(c)

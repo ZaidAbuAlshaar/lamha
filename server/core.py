@@ -276,6 +276,8 @@ def compute_baseline(prev_checkins: list[dict], now: datetime, days: int = BASEL
         if not (lo <= t < now):
             continue
         v = c.get("vitals") or {}
+        if v.get("excluded_from_baseline"):  # v2 protocol: readings right after exercise/caffeine never shape the baseline
+            continue
         n += 1
         if vitals_usable(v, "hr"):
             hrs.append(float(v["hr_bpm"]))

@@ -46,6 +46,7 @@ export interface VitalsResult {
   quality_reasons?: string[];
   quality_score?: number;
   quality_components?: Record<string, number>;
+  beat_times_s?: number[]; // v2 protocol: pulse peak times, s since scan start (breathing check)
   diagnostics?: Record<string, unknown>;
 }
 
@@ -464,6 +465,8 @@ export class VitalsEngine {
       const v = hrv(findPeaks(hr.beatWave, FS, hr.bpm / 60));
       rmssd = v.rmssd; sdnn = v.sdnn;
     }
+    // v2 protocol: beat times for the breathing check, computed even when SNR < 10 (t[0] is the scan start).
+    const beatTimes = hr.bpm ? findPeaks(hr.beatWave, FS, hr.bpm / 60).map((x) => Math.round(x * 1000) / 1000) : [];
     const stress = stressFromRmssd(rmssd);
     const quality: VitalsResult['quality'] = hrConf >= 0.6 && faceFraction >= 0.85 ? 'good' : hrConf >= 0.35 && faceFraction >= 0.6 ? 'fair' : 'poor';
     const sum = this.diag.summary();
@@ -484,6 +487,7 @@ export class VitalsEngine {
       face_fraction: Math.round(faceFraction * 100) / 100,
       bvp_preview: Array.from(prev, (x) => Math.round((x / mx) * 1000) / 1000),
       quality_reasons: reasons,
+      beat_times_s: beatTimes,
       diagnostics: {
         engine: 'baseline-v1', mode: 'face',
         device: deviceInfo(this.stream?.getVideoTracks()[0] ?? null, this.video, landmarkerDelegate),

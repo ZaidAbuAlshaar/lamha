@@ -14,6 +14,14 @@ export interface Vitals {
   fps: number;
   ref_hr_bpm: number | null;
   bvp_preview: number[];
+  // v2 protocol (web/src/protocol): all optional, absent when the flags are off
+  context?: { exercise: boolean; caffeine: boolean; slept_well: boolean; took_meds?: boolean | null };
+  readings?: number[]; // HRs of the good 30 s readings used for the final value
+  reading_count?: number;
+  scan_count?: number; // camera scans made, poor ones included
+  protocol_incomplete?: boolean; // stopped at the scan cap before the protocol completed
+  quality_score?: number;
+  excluded_from_baseline?: boolean; // exercise / caffeine context or poor quality
 }
 
 export interface Patient {

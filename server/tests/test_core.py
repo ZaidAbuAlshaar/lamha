@@ -285,3 +285,12 @@ def test_camera_only_emergency_needs_clean_reading():
     unsure = {"hr_bpm": 140, "hr_confidence": 0.55, "rr_bpm": 15, "rr_confidence": 0.8, "quality": "fair"}
     assert vitals_rules(sure)[0] == "emergency"
     assert vitals_rules(unsure)[0] == "appointment"
+
+
+def test_baseline_skips_context_readings():
+    from datetime import datetime, timedelta, timezone
+    from core import compute_baseline
+    now = datetime(2026, 10, 24, 12, tzinfo=timezone.utc)
+    mk = lambda d, hr, ex=False: {"created_at": (now - timedelta(days=d)).isoformat(), "vitals": {"hr_bpm": hr, "hr_confidence": 0.9, "quality": "good", "excluded_from_baseline": ex}}
+    prev = [mk(1, 70), mk(2, 72), mk(3, 71), mk(4, 120, True)]
+    assert compute_baseline(prev, now)["hr"] == 71.0

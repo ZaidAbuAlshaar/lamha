@@ -20,6 +20,10 @@ export const FLAG_DEFAULTS = {
   diagnostics: true, // send a numbers-only diagnostics record per scan
   community: true, timeline: true, // insights: doctor community early-warning tab + patient timeline/what-changed/voice markers
   centerAlerts: true, // emergency: show partner-center alert status (the 911 link always shows)
+  contextQuestions: true, // v2 protocol: one-tap context questions (exercise / caffeine / sleep / meds) before the scan
+  twoReadings: true, // v2 protocol: two 30 s readings (a third if they differ > 5 bpm); poor readings never counted
+  breathing: true, // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
+  dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
 };
 
 export type Flags = typeof FLAG_DEFAULTS;
