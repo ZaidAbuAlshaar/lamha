@@ -1,4 +1,4 @@
 node_modules/
 results/*.png
+results/**/*.png
 assets/
-results/flow/*.png
