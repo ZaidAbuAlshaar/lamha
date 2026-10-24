@@ -6,13 +6,13 @@
 .fc-badge.ok { color: var(--fu); border-color: var(--fu); }
 .fc-badge.warn { color: var(--apt); border-color: var(--apt); }
 .fc-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--muted); }
-.fc-legend i { display: inline-block; vertical-align: middle; margin-inline-end: 4px; }
-.fc-legend .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hr); }
-.fc-legend .dot.hollow { background: none; border: 1.5px solid var(--muted); }
-.fc-legend .band { width: 14px; height: 8px; background: var(--hr); opacity: .25; }
-.fc-legend .dash { width: 14px; border-top: 2px dashed var(--hrv); }
-.fc-legend .sym { width: 7px; height: 7px; background: var(--hrv); transform: rotate(45deg); }
-.fc-legend .alarm { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid var(--apt); }
+.fc-legend .fc-i { flex: none; border-radius: 0; box-shadow: none; display: inline-block; vertical-align: middle; margin-inline-end: 4px; }
+.fc-legend .fc-i.dot { width: 8px; height: 8px; border-radius: 50% !important; background: var(--hr); }
+.fc-legend .fc-i.dot.hollow { background: none; border: 1.5px solid var(--muted); }
+.fc-legend .fc-i.band { width: 14px; height: 8px; background: var(--hr); opacity: .25; }
+.fc-legend .fc-i.dashk { width: 14px; border-top: 2px dashed var(--hrv); }
+.fc-legend .fc-i.symk { width: 7px; height: 7px; background: var(--hrv); transform: rotate(45deg); }
+.fc-legend .fc-i.alarm { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid var(--apt); }
 .fc-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
 .fc-facts .mono, .fc-card .mono { font-family: var(--mono); direction: ltr; unicode-bidi: isolate; }
 .fc-facts b { color: var(--text); font-size: 15px; }

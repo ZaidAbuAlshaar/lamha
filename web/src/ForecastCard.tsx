@@ -55,12 +55,12 @@ export function ForecastCard({ patientId, refreshKey }: { patientId: string; ref
       <FcChart f={f} />
 
       <div className="fc-legend">
-        <span><i className="dot" /> قراءة جيدة</span>
-        <span><i className="dot hollow" /> جودة ضعيفة / مستبعدة</span>
-        <span><i className="band" /> المعدل المعتاد ± 2 انحراف</span>
-        <span><i className="dash" /> توقّع + مدى 80%</span>
-        <span><i className="sym" /> عرض مذكور</span>
-        <span><i className="alarm" /> إنذار CUSUM</span>
+        <span><i className="fc-i dot" /> قراءة جيدة</span>
+        <span><i className="fc-i dot hollow" /> جودة ضعيفة / مستبعدة</span>
+        <span><i className="fc-i band" /> المعدل المعتاد ± 2 انحراف</span>
+        <span><i className="fc-i dashk" /> توقّع + مدى 80%</span>
+        <span><i className="fc-i symk" /> عرض مذكور</span>
+        <span><i className="fc-i alarm" /> إنذار CUSUM</span>
       </div>
 
       <div className="fc-facts">
@@ -70,13 +70,13 @@ export function ForecastCard({ patientId, refreshKey }: { patientId: string; ref
           <div className="dim">{f.baseline_reason_ar}</div>
         )}
         {f.latest && (
-          <div><span className="dim">آخر قراءة</span> <b className="mono">{Math.round(f.latest.hr)}</b> <span className="dim">ن/د</span>{f.latest.z != null && <span className="dim mono"> · z {f.latest.z.toFixed(1)}</span>}</div>
+          <div><span className="dim">آخر قراءة</span> <b className="mono">{Math.round(f.latest.hr)}</b> <span className="dim">ن/د</span>{f.latest.z != null && <span className="dim"> · <bdi dir="ltr" className="mono">z = {f.latest.z.toFixed(1)}</bdi></span>}</div>
         )}
         {fc ? (
           fc.points.map((p) => (
             <div key={p.h}>
               <span className="dim">بعد {p.h} ساعة</span> <b className="mono">{Math.round(p.hr)}</b>{' '}
-              <span className="dim mono">({Math.round(p.lo)}–{Math.round(p.hi)})</span>
+              <bdi dir="ltr" className="dim mono">[{Math.round(p.lo)}–{Math.round(p.hi)}]</bdi>
             </div>
           ))
         ) : (
@@ -119,7 +119,7 @@ function FcChart({ f }: { f: ForecastResp }) {
   const last = good[good.length - 1];
   const nDays = Math.round((tEnd - t0) / DAY);
   const step = nDays > 14 ? 3 : 2;
-  const ticks = Array.from({ length: Math.floor(nDays / step) + 1 }, (_, i) => t0 + i * step * DAY);
+  const ticks = Array.from({ length: Math.floor(nDays / step) + 1 }, (_, i) => t0 + i * step * DAY).filter((t) => xs(t) <= W - padR - 16);
   const yTicks = [lo + 2, Math.round((lo + hi) / 2), hi - 2];
   const symDays = Array.from(new Set(f.points.filter((p) => p.symptoms.length).map((p) => p.date)));
   const noon = (d: string) => dayMs(d) + DAY / 2 - 3 * 3600000; // ~09:00 Amman
