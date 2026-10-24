@@ -99,6 +99,7 @@ def _history(checkins_oldest_first: list[dict], days: int) -> list[dict]:
 
 # ---------------------------------------------------------------- API
 # v2 routers
+import monitor_api; app.include_router(monitor_api.router)  # noqa: E402,E702
 
 
 @app.get("/api/health")

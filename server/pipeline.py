@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 
 import core
+import monitor
 
 SEV = {"mild", "moderate", "severe"}
 
@@ -110,6 +111,12 @@ def analyze(patient: dict, vitals: dict, transcript: str, transcript_source: str
     if ai_level and core.LEVEL_RANK[ai_level] > core.LEVEL_RANK[rule_level]:
         reasons_ar.append("رفع الذكاء الاصطناعي مستوى الفرز" + (f": {ai_reason}" if ai_reason else ""))
         reasons_en.append("AI escalated the triage level")
+    # v2 monitor: sustained CUSUM rise may raise followup -> appointment only (red-flag rules still win)
+    mon = monitor.followup_level(list(prev_checkins) + [{"created_at": now.isoformat(), "vitals": vitals}])
+    if mon:
+        final = core.max_level(final, mon[0])
+        reasons_ar.append(mon[1])
+        reasons_en.append(mon[2])
     if not reasons_ar:
         reasons_ar.append("لا توجد علامات خطر والقراءات ضمن المعدل")
         reasons_en.append("No red flags; readings within range")
