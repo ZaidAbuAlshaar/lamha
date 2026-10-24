@@ -211,3 +211,13 @@ def test_checkin_endpoint_hooks_alert(env, monkeypatch):
     r2 = client.post("/api/checkins", json={"patient_id": "p1", "vitals": vit, "transcript": "الحمد لله منيح",
                                             "transcript_source": "typed"})
     assert r2.json()["triage"]["level"] != "emergency" and not r2.json().get("alert_id")
+
+
+def test_failed_alert_does_not_swallow_new_emergency(env):
+    a1 = alerts.on_checkin(checkin(codes=("chest_pain",)), patient())
+    for _ in range(3):
+        env.t += 181
+        alerts.tick()
+    assert alerts.get(a1)["status"] == "failed"
+    a2 = alerts.on_checkin(checkin(codes=("chest_pain",)), patient())
+    assert a2 != a1 and alerts.get(a2)["status"] == "pending"

@@ -228,7 +228,7 @@ function Console({ me }: { me: CenterInfo }) {
                 <p className="cc-where">📍 {a.area_ar}{mine ? ` · تقريباً ${mine.distance_km} كم عن المركز` : ''}</p>
                 <p className="cc-note">مؤشر للمتابعة، مش تشخيص · الأرقام من كاميرا الموبايل</p>
                 <button className="cc-ack" disabled={busy === a.id} onClick={() => ack(a.id)}>{busy === a.id ? '…' : 'استلمنا'}</button>
-                {left != null && <p className="cc-muted">إذا ما استلمتوا، الحالة بتتحوّل للمركز التالي خلال {left} ث</p>}
+                {left != null && <p className="cc-muted">{(myStep || a.step) >= a.max_steps ? `آخر مركز — إذا ما استلمتوا خلال ${left} ث رح نطلب من المريض يتصل 911` : `إذا ما استلمتوا، الحالة بتتحوّل للمركز التالي خلال ${left} ث`}</p>}
               </article>
             );
           })}

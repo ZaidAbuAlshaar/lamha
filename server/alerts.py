@@ -182,8 +182,8 @@ def _create(c: dict, p: dict) -> str:
     now = clock()
     codes = _codes(c)
     with _tick_lock:
-        recent = _rows("SELECT doc FROM alerts WHERE patient_id=? AND ts>=? ORDER BY ts DESC LIMIT 1",
-                       (p["id"], now - DEDUP_S))
+        recent = _rows("SELECT doc FROM alerts WHERE patient_id=? AND ts>=? AND status!='failed' ORDER BY ts DESC LIMIT 1",
+                       (p["id"], now - DEDUP_S))  # a failed alert never swallows a new emergency
         if recent and set(codes) <= set(recent[0].get("red_flag_codes") or []):
             a = recent[0]
             a.setdefault("checkin_ids", [a["checkin_id"]]).append(c["id"])
