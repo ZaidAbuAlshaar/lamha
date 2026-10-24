@@ -3,25 +3,8 @@ import QRCode from 'qrcode';
 import type { HistoryPoint, Level } from './api';
 import { LEVEL } from './api';
 
-export function Logo({ size = 30 }: { size?: number }) {
-  // An eye whose iris is a heartbeat trace: "a glance" that reads the pulse.
-  return (
-    <svg className="brand-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <path d="M2 16c3.6-6.2 8.4-9.3 14-9.3S26.4 9.8 30 16c-3.6 6.2-8.4 9.3-14 9.3S5.6 22.2 2 16z" fill="none" stroke="var(--hr)" strokeWidth="2" />
-      <path d="M8.5 16h4l1.6-3.6 2.6 7.4 1.8-3.8h5" fill="none" stroke="var(--hr)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function Brand() {
-  return (
-    <a className="brand" href="#/">
-      <Logo />
-      <span>نظرة</span>
-      <span className="dim" style={{ fontWeight: 500, fontSize: 14 }}>Nazra</span>
-    </a>
-  );
-}
+// Logo / Brand / ThemeToggle live in brand/ (brand workstream); re-exported so imports stay unchanged.
+export { Logo, Brand, ThemeToggle } from './brand/Logo';
 
 /** Scrolling pulse trace; values in [-1, 1]. */
 export function Wave({ data, color = 'var(--hr)', height = 64 }: { data: number[]; color?: string; height?: number }) {

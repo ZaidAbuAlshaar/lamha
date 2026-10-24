@@ -1,1 +1,37 @@
-{ "name": "نظرة · Nazra", "short_name": "نظرة", "start_url": "/#/", "display": "standalone", "background_color": "#060908", "theme_color": "#060908", "dir": "rtl", "lang": "ar", "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+{
+  "name": "نظرة · Nazra",
+  "short_name": "نظرة",
+  "description": "فحص صحي عن بعد بكاميرا الموبايل، وملخص للطبيب.",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8F6F3",
+  "theme_color": "#B42D25",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
