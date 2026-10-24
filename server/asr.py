@@ -6,6 +6,8 @@ import os
 import threading
 import time
 
+import voice_markers  # insights (pure, no model)
+
 os.environ.setdefault("HF_HOME", r"D:\models\hf")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
@@ -83,11 +85,23 @@ def transcribe(path: str) -> dict:
     t0 = time.perf_counter()
     with _lock:
         segs, info = _model.transcribe(path, language="ar", vad_filter=True, beam_size=5,
-                                       initial_prompt=INITIAL_PROMPT, condition_on_previous_text=False)
-        text = " ".join(s.text.strip() for s in segs).strip()
+                                       initial_prompt=INITIAL_PROMPT, condition_on_previous_text=False,
+                                       word_timestamps=voice_markers.enabled())  # insights: word timings
+        return result_from_segments(segs, info, t0)  # segments decode lazily: consume inside the lock
+
+
+def result_from_segments(segs, info, t0: float) -> dict:
+    """Pure: Whisper segments -> the /api/transcribe body (old fields kept + insights `words`/`voice_markers`)."""
+    segs = list(segs)
+    text = " ".join(s.text.strip() for s in segs).strip()
     import re
     key = lambda x: re.sub(r"[\W_]+", "", x)
     if text and key(text) in key(INITIAL_PROMPT):
-        text = ""  # Whisper echoed its prompt on silence; that is not the patient speaking
-    return {"text": text, "duration_s": round(float(info.duration), 2), "language": info.language,
-            "processing_ms": int((time.perf_counter() - t0) * 1000), "model": MODEL_NAME}
+        text, segs = "", []  # Whisper echoed its prompt on silence; that is not the patient speaking
+    words = [{"w": w.word.strip(), "start": round(float(w.start), 3), "end": round(float(w.end), 3)}
+             for s in segs for w in (getattr(s, "words", None) or [])]
+    out = {"text": text, "duration_s": round(float(info.duration), 2), "language": info.language,
+           "processing_ms": int((time.perf_counter() - t0) * 1000), "model": MODEL_NAME, "words": words}
+    if voice_markers.enabled():
+        out["voice_markers"] = voice_markers.compute(words)
+    return out

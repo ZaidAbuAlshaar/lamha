@@ -21,6 +21,8 @@ All behaviour added in the hardening pass is behind one of these. Defaults are w
 | `NAZRA_DEV_RECORDING` | `0` | `1` enables `POST/GET /api/dev/recordings` (ground-truth videos). Off = every route 404s. |
 | `NAZRA_REC_DIR` | `D:\nazra-recordings` | Where dev recordings go (`<id>.<ext>` + `<id>.json`). Refused (HTTP 500) if it resolves inside the repo. Videos are never served back. |
 | `NAZRA_REC_MAX_MB` | `200` | Max size of one dev recording upload (HTTP 413 above). |
+| `NAZRA_COMMUNITY` | `1` | Insights: `GET /api/community` (area early-warning: HR ≥ own baseline ×1.10 + cough/dyspnea/fever/sore_throat/runny_nose in the last 72 h; alert when count ≥ 3 and ≥ mean + 2·SD of the area's 3 earlier 72 h windows in 14 days; areas with < 5 patients are suppressed, no names). `0` = 404. |
+| `NAZRA_VOICE_MARKERS` | `1` | Insights: Whisper `word_timestamps=True`; `/api/transcribe` also returns `words` + `voice_markers` (pauses ≥ 300 ms, words per breath group, words/s, quality); `GET /api/patients/{id}/voice` compares with the patient's own baseline (≥ 3 earlier ok-quality voice check-ins). `0` = no word timestamps, no markers. |
 | `HF_HOME` / `HF_HUB_OFFLINE` | `D:\models\hf` / `1` | Whisper model cache; offline. |
 
 ## `/api/health`
@@ -40,3 +42,11 @@ New: `components.{whisper,gemma,rules,database,tunnel}` each
 multipart: `video` (file) + `meta` (JSON string): `ref_hr_bpm` (number 20–250), `ref_source`, `device`, `facing`
 (non-empty strings), `seconds` (0–600), `consent: true` (required). Anything else → 400.
 `GET /api/dev/recordings` lists the saved meta JSONs (newest first).
+
+## Insights routes
+
+- `GET /api/community` → `{rule_ar, k_min, window_h, history_days, label_ar, areas:[{area_ar, n_patients, count_72h, baseline, baseline_sd, baseline_windows, threshold, alert, suppressed, simulated, label_ar}]}`. Suppressed areas carry no numbers.
+- `GET /api/patients/{id}/changes` → «شو تغيّر من آخر زيارة»: `{available, lines_ar[2], data, days_between}`; numbers are inserted by code from the two latest check-ins.
+- `GET /api/patients/{id}/voice` → `{enabled, available, n_prior, current, baseline, delta_pct, quality_ok, reason_ar, label_ar}`.
+- `POST /api/checkins` keeps `voice_markers` and `context` (top-level body or inside `vitals`) on `vitals` (numbers/short strings only).
+- Demo cohort for the community tab lives in its own tables (`community_patients`, `community_checkins`) so it stays out of the triage queue and the patient picker.
