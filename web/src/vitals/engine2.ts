@@ -416,7 +416,7 @@ export class HardenedEngine {
     const stuck = now - this.gateStart > 15000;
     this.lastGate = { code, checks, passFor, stuck, lowFps };
     const gateOn = this.f.preScanGate;
-    const ready = !gateOn || this.forced || (pass && passFor >= 2 && now - this.gateStart >= 3000);
+    const ready = !gateOn || this.forced || (pass && passFor >= 1 && now - this.gateStart >= 2000);
     if (ready) this.startT = ts;
   }
 
@@ -510,6 +510,57 @@ export class HardenedEngine {
     ctx.drawImage(v, ox, oy, dw, dh);
     const k = dw / this.proc.width;
     const pulse = this.liveHr ? Math.max(0, Math.cos((2 * Math.PI * this.liveHr * performance.now()) / 60000)) ** 3 : 0;
+    const lm = this.lastLm;
+    if (lm && this.mode === 'face') {
+      // Face mesh: every landmark as a small dot, key points larger, so the user sees what is being measured.
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      for (let i = 0; i < lm.length; i++) {
+        ctx.beginPath();
+        ctx.arc(ox + lm[i].x * dw, oy + lm[i].y * dh, 1.1 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(211, 84, 60, 0.95)';
+      for (const i of [33, 133, 362, 263, 1, 61, 291, 152, 10, 234, 454]) {
+        ctx.beginPath();
+        ctx.arc(ox + lm[i].x * dw, oy + lm[i].y * dh, 2.6 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Corner brackets around the face (the logo's camera frame) + a scan line sweeping down.
+      let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+      for (const p of lm) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+      const bx0 = ox + x0 * dw - 10 * dpr, by0 = oy + y0 * dh - 10 * dpr, bx1 = ox + x1 * dw + 10 * dpr, by1 = oy + y1 * dh + 10 * dpr;
+      const L = Math.min(bx1 - bx0, by1 - by0) * 0.22;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 3 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (const [cx, cy, sx, sy] of [[bx0, by0, 1, 1], [bx1, by0, -1, 1], [bx0, by1, 1, -1], [bx1, by1, -1, -1]]) {
+        ctx.moveTo(cx, cy + sy * L); ctx.lineTo(cx, cy); ctx.lineTo(cx + sx * L, cy);
+      }
+      ctx.stroke();
+      const sweep = (performance.now() % 1800) / 1800;
+      const sy = by0 + (by1 - by0) * sweep;
+      ctx.strokeStyle = 'rgba(211, 84, 60, 0.7)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath(); ctx.moveTo(bx0, sy); ctx.lineTo(bx1, sy); ctx.stroke();
+    }
+    if (this.chest && this.mode === 'face' && this.startT != null) {
+      // Breathing band on the chest/shoulders with a live marker that moves with the measured motion.
+      const c = this.chest;
+      ctx.setLineDash([6 * dpr, 6 * dpr]);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.strokeRect(ox + c.x * k, oy + c.y * k, c.w * k, c.h * k);
+      ctx.setLineDash([]);
+      const recent = this.chestMv.slice(-60);
+      if (recent.length > 2) {
+        const lo = Math.min(...recent), hi = Math.max(...recent), span = hi - lo || 1;
+        const my = oy + (c.y + c.h * (0.2 + 0.6 * ((recent[recent.length - 1] - lo) / span))) * k;
+        ctx.strokeStyle = 'rgba(185, 166, 144, 0.95)';
+        ctx.lineWidth = 3 * dpr;
+        ctx.beginPath(); ctx.moveTo(ox + c.x * k, my); ctx.lineTo(ox + (c.x + c.w) * k, my); ctx.stroke();
+      }
+    }
     for (const poly of this.polys) {
       ctx.beginPath();
       poly.forEach((p, i) => (i ? ctx.lineTo(ox + p.x * k, oy + p.y * k) : ctx.moveTo(ox + p.x * k, oy + p.y * k)));

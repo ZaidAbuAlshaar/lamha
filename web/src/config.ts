@@ -21,8 +21,8 @@ export const FLAG_DEFAULTS = {
   community: true, timeline: true, // insights: doctor community early-warning tab + patient timeline/what-changed/voice markers
   centerAlerts: true, // emergency: show partner-center alert status (the 911 link always shows)
   contextQuestions: true, // v2 protocol: one-tap context questions (exercise / caffeine / sleep / meds) before the scan
-  twoReadings: true, // v2 protocol: two 30 s readings (a third if they differ > 5 bpm); poor readings never counted
-  breathing: true, // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
+  twoReadings: false, // user: one reading is enough; it auto-extends when weak (was true) // v2 protocol: two 30 s readings (a third if they differ > 5 bpm); poor readings never counted
+  breathing: false, // optional (?flags=breathing:1); kept off to keep the check-in short // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
   dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
   forecastCard: true, // doctor «توقّع صحة المريض» card (monitor engine + forecast)
   report: true, // patient report page «تقريري» (#/report/<checkinId>) with TTS, print/PDF, QR

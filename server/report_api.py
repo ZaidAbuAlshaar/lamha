@@ -43,7 +43,7 @@ def tts_route(body: dict = Body(...)):
         raise HTTPException(503, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(502, detail=str(e)[:300])
-    return FileResponse(str(path), media_type="audio/wav", headers={"Cache-Control": "private, max-age=3600"})
+    return FileResponse(str(path), media_type="audio/mpeg" if str(path).endswith(".mp3") else "audio/wav", headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/api/tts/health")
