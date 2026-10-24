@@ -73,3 +73,16 @@ Routes: `GET /api/centers`, `GET /api/alerts?center_id=`, `GET /api/alerts/{id}`
 `alerts.health()` → open alerts + connected WebSocket clients per center.
 **uvicorn needs the `websockets` (or `wsproto`) package for the WebSocket route**; without it the console falls back to REST polling every 2 s.
 Escalation runs in a daemon thread (1 s tick) started on the first alert / alerts request.
+## Patient report + TTS (workstream: report)
+
+| Flag | Default | What it does |
+|---|---|---|
+| `NAZRA_REPORT` | `1` | `GET /api/checkins/{id}/report`: patient report built by code (vitals + code-written meaning, fixed next step per level, do-now lines only from `static_data/advice_cards.json` through the advice guard, 911 lines copied verbatim from the cards, ≤3 doctor questions, nearest demo center «تجريبي», calm number-free baseline sentence, offline QR text). Emergency check-ins get a minimal report (911 action, nearest center, QR). `0` = 404. |
+| `NAZRA_TTS` | `1` | `POST /api/tts {text}` → `audio/wav` via Piper (`ar_JO-kareem-medium`), cached by text hash. `GET /api/tts/health`. `0` = 404 (the page falls back to the browser's `speechSynthesis`). |
+| `NAZRA_PIPER_EXE` | `D:\nazra-piper-venv\Scripts\piper.exe` | Piper CLI (separate venv; `piper-tts` from PyPI). |
+| `NAZRA_PIPER_VOICE` | `D:\models\piper\ar_JO-kareem-medium.onnx` | Voice model (`.onnx.json` must sit next to it). From HF `rhasspy/piper-voices`. |
+| `NAZRA_TTS_CACHE` | `D:\nazra-tts-cache` | WAV cache (`<sha256(voice,text)[:32]>.wav`). |
+| `NAZRA_TTS_TIMEOUT_S` | `60` | Hard timeout for one Piper subprocess call (HTTP 502 on timeout/failure, 503 if Piper/voice missing). |
+
+Piper gets the text on stdin as UTF-8 with `PYTHONUTF8=1`; without it Windows decodes stdin with the ANSI code page and the audio is garbage.
+`tts.health()` / `tts.warm()` follow the shared health shape (`device: CPU`). Advice cards are drafts: «مسودة — بانتظار مراجعة طبية».

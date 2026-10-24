@@ -4,6 +4,7 @@ import Doctor from './Doctor';
 import ScanTest from './ScanTest';
 import DevRecord from './DevRecord';
 import Center from './Center';
+import Report from './Report';
 
 function route() {
   return window.location.hash.replace(/^#/, '').split('?')[0] || '/';
@@ -20,5 +21,6 @@ export default function App() {
   if (r.startsWith('/scan-test')) return <ScanTest />;
   if (r.startsWith('/dev-record')) return <DevRecord />;
   if (r.startsWith('/center')) return <Center />;
+  if (r.startsWith('/report/')) return <Report id={decodeURIComponent(r.slice('/report/'.length))} />;
   return <Check key={r} />;
 }

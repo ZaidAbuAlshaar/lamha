@@ -1,0 +1,81 @@
+/* Patient report («تقريري»). Uses only the shared design tokens. Large type, RTL, prints cleanly. */
+.rep { font-size: 18px; }
+.rep-title { font-weight: 700; color: var(--muted); }
+.rep-body { gap: 14px; }
+.rep-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rep-who { display: flex; flex-direction: column; gap: 2px; }
+.rep-who strong { font-size: 22px; }
+.rep-chip {
+  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  border: 1px solid var(--line-2); color: var(--muted); background: var(--panel-2); vertical-align: middle;
+}
+
+.rep-level { border-radius: var(--radius); padding: 18px; border: 2px solid var(--line-2); background: var(--panel); display: grid; gap: 6px; }
+.rep-level.emg { border-color: var(--emg); }
+.rep-level.apt { border-color: var(--apt); }
+.rep-level.fu { border-color: var(--fu); }
+.rep-level.emg .rep-big { color: var(--emg); }
+.rep-level.apt .rep-big { color: var(--apt); }
+.rep-level.fu .rep-big { color: var(--fu); }
+.rep-k { font-size: 14px; color: var(--muted); }
+.rep-big { font-size: 30px; font-weight: 700; line-height: 1.3; }
+.rep-next { margin: 0; font-size: 20px; line-height: 1.6; }
+.rep-call { margin-top: 8px; text-decoration: none; font-size: 20px; min-height: 64px; }
+
+.rep-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.rep-card h2 { margin: 0 0 10px; font-size: 19px; font-weight: 700; line-height: 1.4; }
+.rep-card p { margin: 0 0 6px; line-height: 1.7; }
+.rep-list { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; line-height: 1.7; }
+.rep-911 { border-color: var(--emg); }
+.rep-911 h2 { color: var(--emg); }
+
+.rep-vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rep-vital { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 4px; align-content: start; }
+.rep-vlabel { font-size: 15px; color: var(--muted); }
+.rep-vval { font-size: 34px; font-weight: 700; line-height: 1.2; }
+.rep-vval small { font-size: 14px; font-weight: 500; color: var(--muted); }
+.rep-v-hr .rep-vval .num { color: var(--hr); }
+.rep-v-rr .rep-vval .num { color: var(--rr); }
+.rep-vq { font-size: 13px; }
+.rep-vmean { font-size: 16px; margin: 4px 0 0 !important; }
+.rep-note { font-size: 12px; color: var(--dim); }
+.rep-base { margin-top: 10px !important; color: var(--muted); }
+
+.rep-qr { text-align: center; }
+.rep-qr .qr { max-width: 240px; }
+.rep-small { font-size: 14px; margin-top: 8px; }
+
+.rep-actions { display: grid; gap: 10px; }
+.rep-actions .btn { text-decoration: none; }
+.rep-share { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; background: var(--panel); }
+.rep-share summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+.rep-share[open] { display: grid; gap: 8px; }
+.rep-share textarea {
+  width: 100%; resize: vertical; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2);
+  padding: 10px; font-size: 16px; line-height: 1.6; color: var(--text);
+}
+.rep-sources ul { margin: 0; padding-inline-start: 22px; display: grid; gap: 6px; font-size: 15px; }
+.rep-sources a { color: var(--brand, var(--hrv)); overflow-wrap: anywhere; }
+.rep-disc { margin-top: 4px; }
+
+@media (max-width: 380px) {
+  .rep-vitals { grid-template-columns: 1fr; }
+}
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  .rep {
+    --bg: #ffffff; --bg-2: #ffffff; --panel: #ffffff; --panel-2: #ffffff; --line: #bdbdbd; --line-2: #9e9e9e;
+    --text: #000000; --muted: #333333; --dim: #555555;
+    --hr: #0a6b33; --rr: #7a5a00; --emg: #b00020; --apt: #8a5a00; --fu: #0a6b33;
+    max-width: none; padding: 0; color: var(--text); background: var(--bg);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  html, body, #root { height: auto !important; background: #fff !important; }
+  .no-print, .rep .topbar .step-dots { display: none !important; }
+  .rep .screen { animation: none; }
+  .rep-card, .rep-level, .rep-vital { break-inside: avoid; page-break-inside: avoid; }
+  .rep-vitals { grid-template-columns: 1fr 1fr; }
+  .rep-sources a { color: var(--text); text-decoration: underline; }
+  .rep-qr .qr { max-width: 170px; }
+}

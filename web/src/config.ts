@@ -25,6 +25,7 @@ export const FLAG_DEFAULTS = {
   breathing: true, // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
   dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
   forecastCard: true, // doctor «توقّع صحة المريض» card (monitor engine + forecast)
+  report: true, // patient report page «تقريري» (#/report/<checkinId>) with TTS, print/PDF, QR
 };
 
 export type Flags = typeof FLAG_DEFAULTS;

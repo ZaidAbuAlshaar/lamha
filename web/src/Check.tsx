@@ -579,6 +579,7 @@ function Result({ c, onAgain }: { c: Checkin; onAgain: () => void }) {
         <div className="vtile"><div className="lbl">تنفس</div><div className="val rr" style={{ fontSize: 32 }}>{v.rr_bpm != null ? Math.round(v.rr_bpm) : '--'}</div></div>
       </div>
       <div className="card row"><span className="hr" style={{ fontSize: 20 }}>✓</span><span>وصل ملخصك للطبيب. القرار النهائي إله.</span></div>
+      {getFlags().report && <a className="btn block" href={`#/report/${c.id}`} style={{ textDecoration: 'none' }}>شوف تقريري</a>}
       <button className="btn block" onClick={onAgain}>فحص جديد</button>
       <ReminderButton />
       <p className="disclaimer">أداة فرز مش تشخيص · الموديل: {c.ai.ok ? c.ai.model : 'قواعد فقط'}</p>
