@@ -4,12 +4,15 @@ from __future__ import annotations
 import json
 import os
 import time
+from typing import List, Literal
 
 import httpx
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 OLLAMA = os.environ.get("OLLAMA_HOST_URL", "http://127.0.0.1:11434")
 MODEL = os.environ.get("NAZRA_LLM", "gemma4:e4b-it-qat")
-TIMEOUT_S = 40.0
+TIMEOUT_S = float(os.environ.get("NAZRA_LLM_TIMEOUT_S", "25"))
+NUM_CTX = 4096  # preload and extract must match, or Ollama reloads the model on the first request
 
 SYMPTOM_KEYS = ["chest_pain", "dyspnea", "cough", "fever", "headache", "dizziness", "fatigue", "palpitations",
                 "nausea", "vomiting", "diarrhea", "abdominal_pain", "back_pain", "joint_pain", "sore_throat",
@@ -43,6 +46,48 @@ SCHEMA = {
     "required": ["symptoms", "summary_ar", "summary_en", "advice_ar", "triage_suggestion", "triage_reason_ar"],
 }
 
+
+
+# ---------------------------------------------------------------- explicit schema validation (mirrors SCHEMA)
+class _Symptom(BaseModel):
+    model_config = ConfigDict(extra="ignore", strict=True)
+    key: Literal[tuple(SYMPTOM_KEYS)]  # type: ignore[valid-type]
+    label_ar: str
+    label_en: str
+    span: str
+    severity: Literal["mild", "moderate", "severe", "unknown"]
+    duration: str
+
+
+class _Extraction(BaseModel):
+    model_config = ConfigDict(extra="ignore", strict=True)
+    symptoms: List[_Symptom]
+    summary_ar: str
+    summary_en: str
+    advice_ar: str
+    triage_suggestion: Literal["emergency", "appointment", "followup"]
+    triage_reason_ar: str
+
+
+def validate_extraction(data) -> tuple[bool, str | None]:
+    """True if `data` matches SCHEMA exactly (types, required keys, enums). Never raises."""
+    if not isinstance(data, dict):
+        return False, f"top-level JSON is {type(data).__name__}, expected object"
+    try:
+        _Extraction.model_validate(data)
+        return True, None
+    except ValidationError as e:
+        errs = e.errors()
+        first = errs[0] if errs else {}
+        loc = ".".join(str(x) for x in first.get("loc", ()))
+        return False, f"{len(errs)} schema error(s); first: {loc}: {first.get('msg', '')}"[:300]
+
+
+def _fail(code: str, detail: str, t0: float, model: str) -> dict:
+    return {"ok": False, "data": None, "latency_ms": int((time.perf_counter() - t0) * 1000), "error": code,
+            "error_detail": detail[:300], "model": model}
+
+
 SYSTEM = """أنت مساعد استقبال سريري لمركز صحي في الأردن. مهمتك الفرز (triage) وليس التشخيص.
 You are a clinical intake assistant for TRIAGE, not diagnosis.
 
@@ -73,32 +118,51 @@ def build_user_message(transcript: str, patient: dict, computed: dict) -> str:
             (transcript or "(لا يوجد نص)") + "\nTRANSCRIPT>>>")
 
 
-def extract(transcript: str, patient: dict, computed: dict, model: str | None = None) -> dict:
-    """Calls Ollama. Returns {'ok', 'data', 'latency_ms', 'error', 'model'}; never raises."""
+def extract(transcript: str, patient: dict, computed: dict, model: str | None = None,
+            timeout_s: float | None = None) -> dict:
+    """Calls Ollama. Returns {'ok','data','latency_ms','error','error_detail','model'}; never raises.
+    error codes: timeout | unreachable | http_error | invalid_json | invalid_schema | error."""
     model = model or MODEL
+    timeout_s = TIMEOUT_S if timeout_s is None else timeout_s
     t0 = time.perf_counter()
     try:
-        r = httpx.post(f"{OLLAMA}/api/chat", timeout=TIMEOUT_S, json={
+        r = httpx.post(f"{OLLAMA}/api/chat", timeout=timeout_s, json={
             "model": model, "stream": False, "think": False, "format": SCHEMA, "keep_alive": "60m",
-            "options": {"temperature": 0, "seed": 42, "num_ctx": 4096},
+            "options": {"temperature": 0, "seed": 42, "num_ctx": NUM_CTX},
             "messages": [{"role": "system", "content": SYSTEM},
                          {"role": "user", "content": build_user_message(transcript, patient, computed)}],
         })
         r.raise_for_status()
         content = r.json()["message"]["content"]
+    except httpx.TimeoutException as e:
+        return _fail("timeout", f"{type(e).__name__}: {e}", t0, model)
+    except httpx.ConnectError as e:
+        return _fail("unreachable", f"{type(e).__name__}: {e}", t0, model)
+    except httpx.HTTPStatusError as e:
+        return _fail("http_error", f"{type(e).__name__}: {e}", t0, model)
+    except Exception as e:  # malformed Ollama envelope etc.
+        return _fail("error", f"{type(e).__name__}: {e}", t0, model)
+    try:
         data = json.loads(content)
-        return {"ok": True, "data": data, "latency_ms": int((time.perf_counter() - t0) * 1000),
-                "error": None, "model": model}
-    except Exception as e:  # timeout, connection, bad JSON
-        return {"ok": False, "data": None, "latency_ms": int((time.perf_counter() - t0) * 1000),
-                "error": f"{type(e).__name__}: {e}"[:300], "model": model}
+    except Exception as e:
+        return _fail("invalid_json", f"{type(e).__name__}: {e}", t0, model)
+    ok, why = validate_extraction(data)
+    if not ok:
+        return _fail("invalid_schema", why or "schema mismatch", t0, model)
+    return {"ok": True, "data": data, "latency_ms": int((time.perf_counter() - t0) * 1000),
+            "error": None, "error_detail": None, "model": model}
 
 
 # ---------------------------------------------------------------- warm-up / status
-def resident_models() -> list[str]:
-    r = httpx.get(f"{OLLAMA}/api/ps", timeout=3)
+def ps(timeout: float = 3) -> list[dict]:
+    """Raw Ollama /api/ps entries (name, size, size_vram, ...)."""
+    r = httpx.get(f"{OLLAMA}/api/ps", timeout=timeout)
     r.raise_for_status()
-    return [m["name"] for m in r.json().get("models", [])]
+    return list(r.json().get("models", []))
+
+
+def resident_models() -> list[str]:
+    return [m["name"] for m in ps()]
 
 
 def free_vram_and_preload(model: str | None = None, free: bool = True) -> list[str]:
@@ -110,14 +174,20 @@ def free_vram_and_preload(model: str | None = None, free: bool = True) -> list[s
             if name != model:
                 httpx.post(f"{OLLAMA}/api/generate", json={"model": name, "keep_alive": 0}, timeout=30)
                 unloaded.append(name)
-    httpx.post(f"{OLLAMA}/api/generate", json={"model": model, "keep_alive": "60m"}, timeout=180).raise_for_status()
+    httpx.post(f"{OLLAMA}/api/generate", json={"model": model, "keep_alive": "60m", "options": {"num_ctx": NUM_CTX}},
+               timeout=180).raise_for_status()
     return unloaded
 
 
-def status(model: str | None = None) -> dict:
+def status(model: str | None = None, models: list[dict] | None = None, ps_error: str | None = None) -> dict:
+    """Pass `models`/`ps_error` from one ps() call to avoid a second round-trip."""
     model = model or MODEL
-    try:
-        names = resident_models()
-        return {"reachable": True, "ready": model in names, "model": model, "error": None}
-    except Exception as e:
-        return {"reachable": False, "ready": False, "model": model, "error": f"{type(e).__name__}: {e}"[:200]}
+    if models is None and ps_error is None:
+        try:
+            models = ps()
+        except Exception as e:
+            ps_error = f"{type(e).__name__}: {e}"[:200]
+    if ps_error is not None:
+        return {"reachable": False, "ready": False, "model": model, "error": ps_error}
+    names = [m.get("name") for m in models or []]
+    return {"reachable": True, "ready": model in names, "model": model, "error": None}

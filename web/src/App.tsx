@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Check from './Check';
 import Doctor from './Doctor';
 import ScanTest from './ScanTest';
+import DevRecord from './DevRecord';
 
 function route() {
   return window.location.hash.replace(/^#/, '').split('?')[0] || '/';
@@ -16,5 +17,6 @@ export default function App() {
   }, []);
   if (r.startsWith('/doctor')) return <Doctor />;
   if (r.startsWith('/scan-test')) return <ScanTest />;
+  if (r.startsWith('/dev-record')) return <DevRecord />;
   return <Check key={r} />;
 }

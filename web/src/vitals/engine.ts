@@ -2,12 +2,22 @@
 // Everything runs in the browser. No frame ever leaves the device.
 import { FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import {
-  FS, clamp, estimateHr, estimateRr, findPeaks, hrStability, hrv, median, resampleUniform, stressFromRmssd, stressLevel,
+  FS, clamp, estimateHr, estimateRr, findPeaks, hrStability, hrv, resampleUniform, spectrumPeak, stressFromRmssd, stressLevel,
 } from './dsp';
+import { ScanDiag, deviceInfo, environmentReasons } from './diag';
 
 export type Guidance = 'no-face' | 'dark' | 'move' | 'ok';
 
+export interface DebugInfo {
+  fps: number; jitter_ms: number; brightness: number; clipped_pct: number; face_width_pct: number; motion: number;
+  yaw_deg: number; backlight_ratio: number; proc_ms: number; snr_db: number | null; hr: number | null;
+  raw: number[]; bvp: number[]; spec: { f: number[]; p: number[]; peak: number | null };
+  gate?: Record<string, boolean>;
+  algos?: Record<string, number>;
+}
+
 export interface LiveUpdate {
+  debug?: DebugInfo;
   phase: 'loading' | 'waiting-face' | 'scanning' | 'analyzing' | 'done' | 'error';
   elapsed: number;
   progress: number;
@@ -33,12 +43,17 @@ export interface VitalsResult {
   fps: number;
   face_fraction: number;
   bvp_preview: number[];
+  quality_reasons?: string[];
+  quality_score?: number;
+  quality_components?: Record<string, number>;
+  diagnostics?: Record<string, unknown>;
 }
 
 // MediaPipe face-mesh indices. Forehead centre ≈ between 10 (hairline) and 9 (glabella); cheeks at 50 / 280.
 const LM = { top: 10, glabella: 9, chin: 152, left: 234, right: 454, cheekA: 50, cheekB: 280, nose: 1 };
 
 let landmarkerPromise: Promise<FaceLandmarker> | null = null;
+export let landmarkerDelegate = 'unknown';
 
 export function loadLandmarker(): Promise<FaceLandmarker> {
   if (!landmarkerPromise) {
@@ -50,9 +65,13 @@ export function loadLandmarker(): Promise<FaceLandmarker> {
         numFaces: 1,
       });
       try {
-        return await FaceLandmarker.createFromOptions(files, opts('GPU'));
+        const lm = await FaceLandmarker.createFromOptions(files, opts('GPU'));
+        landmarkerDelegate = 'GPU';
+        return lm;
       } catch {
-        return await FaceLandmarker.createFromOptions(files, opts('CPU'));
+        const lm = await FaceLandmarker.createFromOptions(files, opts('CPU'));
+        landmarkerDelegate = 'CPU';
+        return lm;
       }
     })();
     landmarkerPromise.catch(() => (landmarkerPromise = null));
@@ -77,6 +96,21 @@ function rois(lm: NormalizedLandmark[], W: number, H: number): { list: Roi[]; fa
     ],
     faceW, faceH, cx: (L.x + R.x) / 2, cy: (T.y + C.y) / 2,
   };
+}
+
+/** Mean luma of two patches beside the head at forehead height (for backlight detection). */
+export function bgLuma(img: Uint8ClampedArray, W: number, H: number, geo: { faceW: number; faceH: number; cx: number; cy: number }): number | null {
+  const y0 = Math.max(0, Math.floor(geo.cy - geo.faceH * 0.45)), y1 = Math.min(H - 1, Math.floor(geo.cy - geo.faceH * 0.15));
+  let s = 0, n = 0;
+  for (const side of [-1, 1]) {
+    const xa = side < 0 ? Math.max(0, Math.floor(geo.cx - geo.faceW * 1.25)) : Math.min(W - 1, Math.floor(geo.cx + geo.faceW * 0.85));
+    const xb = side < 0 ? Math.max(0, Math.floor(geo.cx - geo.faceW * 0.85)) : Math.min(W - 1, Math.floor(geo.cx + geo.faceW * 1.25));
+    for (let y = y0; y <= y1; y += 2) for (let x = xa; x < xb; x += 2) {
+      const k = (y * W + x) * 4;
+      s += 0.299 * img[k] + 0.587 * img[k + 1] + 0.114 * img[k + 2]; n++;
+    }
+  }
+  return n > 20 ? s / n : null;
 }
 
 export class VitalsEngine {
@@ -113,12 +147,16 @@ export class VitalsEngine {
   private lastLandmarks: NormalizedLandmark[] | null = null;
   private pulse = 0;
   private stopped = false;
+  readonly diag = new ScanDiag();
+  private lastDebug: DebugInfo | undefined;
+  private prevCenter: { x: number; y: number } | null = null;
 
   constructor(
     private video: HTMLVideoElement,
     private overlay: HTMLCanvasElement,
     private seconds: number,
     private onUpdate: (u: LiveUpdate) => void,
+    private opts: { debug?: boolean } = {},
   ) {}
 
   async start() {
@@ -171,7 +209,7 @@ export class VitalsEngine {
     else if (this.recentMotion() > 0.035) guidance = 'move';
     this.onUpdate({
       phase, elapsed, progress: clamp(elapsed / this.seconds, 0, 1), guidance,
-      liveHr: this.liveHr, wave: this.wave, fps: this.fpsEst, error,
+      liveHr: this.liveHr, wave: this.wave, fps: this.fpsEst, error, debug: this.lastDebug,
     });
   }
 
@@ -192,6 +230,7 @@ export class VitalsEngine {
     const now = performance.now();
     if (this.lastTick) this.fpsEst = this.fpsEst ? this.fpsEst * 0.9 + (1000 / (now - this.lastTick)) * 0.1 : 1000 / (now - this.lastTick);
     this.lastTick = now;
+    this.diag.frame(now);
     if (this.startT != null) this.frames++; // face fraction counts only frames after the scan started
     this.process(now / 1000);
   };
@@ -200,6 +239,7 @@ export class VitalsEngine {
     const v = this.video;
     const vw = v.videoWidth, vh = v.videoHeight;
     if (!vw || !vh) return;
+    const tProc = performance.now();
     const W = 320, H = Math.round((320 * vh) / vw);
     if (this.proc.width !== W) { this.proc.width = W; this.proc.height = H; }
     const res = this.landmarker!.detectForVideo(v, performance.now());
@@ -212,7 +252,7 @@ export class VitalsEngine {
       const geo = rois(lm, W, H);
       this.lastRois = geo.list;
       const img = this.pctx.getImageData(0, 0, W, H).data;
-      let sr = 0, sg = 0, sb = 0, n = 0;
+      let sr = 0, sg = 0, sb = 0, n = 0, total = 0, clipped = 0, dark = 0;
       for (const roi of geo.list) {
         const x0 = Math.max(0, Math.floor(roi.cx - roi.w / 2)), x1 = Math.min(W - 1, Math.ceil(roi.cx + roi.w / 2));
         const y0 = Math.max(0, Math.floor(roi.cy - roi.h / 2)), y1 = Math.min(H - 1, Math.ceil(roi.cy + roi.h / 2));
@@ -223,11 +263,33 @@ export class VitalsEngine {
             const k = (y * W + x) * 4;
             const r = img[k], g = img[k + 1], b = img[k + 2];
             const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            total++;
+            if (r >= 250 || g >= 250 || b >= 250) clipped++;
+            if (luma < 25) dark++;
             if (luma < 25 || luma > 245) continue; // clipped pixels carry no pulse
             sr += r; sg += g; sb += b; n++;
           }
         }
       }
+      // diagnostics (numbers only)
+      const P = (i: number) => ({ x: lm[i].x, y: lm[i].y });
+      const nose = P(LM.nose), L = P(LM.left), Rt = P(LM.right), T = P(LM.top), C = P(LM.chin);
+      const ratio = (nose.x - L.x) / Math.max(1e-6, Rt.x - L.x);
+      const vratio = (nose.y - T.y) / Math.max(1e-6, C.y - T.y);
+      const c = { x: geo.cx / geo.faceW, y: geo.cy / geo.faceW };
+      const mv = this.prevCenter ? Math.hypot(c.x - this.prevCenter.x, c.y - this.prevCenter.y) : 0;
+      this.prevCenter = c;
+      this.diag.add({
+        brightness: n ? 0.299 * (sr / n) + 0.587 * (sg / n) + 0.114 * (sb / n) : 0,
+        clippedPct: total ? (100 * clipped) / total : 0,
+        darkPct: total ? (100 * dark) / total : 0,
+        faceWidthPct: (100 * geo.faceW) / W,
+        motion: mv,
+        yawDeg: (ratio - 0.5) * 2 * 55, // rough landmark-ratio estimate
+        pitchDeg: (vratio - 0.6) * 2 * 55,
+        bgBrightness: bgLuma(img, W, H, geo),
+        valid: n > 30,
+      });
       if (n > 30) {
         if (this.startT == null) { this.startT = ts; this.frames = 1; }
         this.faceFrames++;
@@ -240,6 +302,7 @@ export class VitalsEngine {
       }
     }
     this.draw();
+    this.diag.proc(performance.now() - tProc);
 
     if (this.startT != null) {
       const elapsed = ts - this.startT;
@@ -304,6 +367,17 @@ export class VitalsEngine {
     let mx = 1e-9;
     for (const x of w) mx = Math.max(mx, Math.abs(x));
     this.wave = Array.from(w, (x) => x / mx);
+    if (this.opts.debug) {
+      const L = this.diag.live(30);
+      const gw = g.slice(-FS * 10);
+      const gm = gw.reduce((a, b) => a + b, 0) / Math.max(1, gw.length);
+      const sp = est.bvp.length > FS * 4 ? spectrumPeak(est.bvp, FS, 0.7, 3.2, 0.02, 0.1) : null;
+      this.lastDebug = {
+        ...L, snr_db: sp ? sp.snrDb : null, hr: est.bpm,
+        raw: Array.from(gw, (x) => x - gm), bvp: this.wave,
+        spec: sp ? { f: sp.f, p: sp.p, peak: sp.freq } : { f: [], p: [], peak: null },
+      };
+    }
   }
 
   private draw() {
@@ -362,7 +436,15 @@ export class VitalsEngine {
       hr_bpm: null, hr_confidence: 0, hr_snr_db: -99, rr_bpm: null, rr_confidence: 0, hrv_rmssd_ms: null, hrv_sdnn_ms: null,
       stress_index: null, stress_level: null, quality: 'poor', scan_seconds: scanSeconds, fps, face_fraction: faceFraction, bvp_preview: [],
     };
-    if (n < FS * 8) return empty;
+    if (n < FS * 8) {
+      return {
+        ...empty, quality_reasons: ['face_lost', ...environmentReasons(this.diag.summary())],
+        diagnostics: {
+          engine: 'baseline-v1', mode: 'face', device: deviceInfo(this.stream?.getVideoTracks()[0] ?? null, this.video, landmarkerDelegate),
+          ...this.diag.summary(), quality_decision: 'poor', note: 'fewer than 8 s of face frames',
+        },
+      };
+    }
     const [r, g, b, mo, hy] = resampleUniform(this.t, [this.R, this.G, this.B, this.motion, this.headY]);
     const hr = estimateHr(r, g, b);
     const stab = hrStability(r, g, b);
@@ -383,6 +465,12 @@ export class VitalsEngine {
     }
     const stress = stressFromRmssd(rmssd);
     const quality: VitalsResult['quality'] = hrConf >= 0.6 && faceFraction >= 0.85 ? 'good' : hrConf >= 0.35 && faceFraction >= 0.6 ? 'fair' : 'poor';
+    const sum = this.diag.summary();
+    const algo: string[] = [];
+    if (faceFraction < 0.6) algo.push('face_lost');
+    if (snrScore < 0.4) algo.push('low_snr');
+    if (stabScore < 0.4) algo.push('unstable_hr');
+    const reasons = [...environmentReasons(sum), ...algo];
     const prev = hr.bvp.slice(-200);
     let mx = 1e-9;
     for (const x of prev) mx = Math.max(mx, Math.abs(x));
@@ -394,6 +482,17 @@ export class VitalsEngine {
       quality, scan_seconds: Math.round(scanSeconds * 10) / 10, fps: Math.round(fps * 10) / 10,
       face_fraction: Math.round(faceFraction * 100) / 100,
       bvp_preview: Array.from(prev, (x) => Math.round((x / mx) * 1000) / 1000),
+      quality_reasons: reasons,
+      diagnostics: {
+        engine: 'baseline-v1', mode: 'face',
+        device: deviceInfo(this.stream?.getVideoTracks()[0] ?? null, this.video, landmarkerDelegate),
+        ...sum,
+        hr_snr_db: round1(hr.snrDb), hr_stability_sd_bpm: round1(stab), snr_score: Math.round(snrScore * 100) / 100,
+        stability_score: Math.round(stabScore * 100) / 100, face_fraction: Math.round(faceFraction * 100) / 100,
+        hr_confidence: Math.round(hrConf * 100) / 100, rr_snr_db: round1(rr.snrDb), rr_chest_snr_db: round1(c1.snrDb), rr_head_snr_db: round1(c2.snrDb),
+        final_hr_bpm: round1(hr.bpm), quality_decision: quality, quality_reasons: reasons,
+        rule: 'good: conf>=0.6 & face>=0.85; fair: conf>=0.35 & face>=0.6; conf=(0.6*snrScore+0.4*stabScore)*min(1,face/0.9)',
+      },
     };
   }
 }

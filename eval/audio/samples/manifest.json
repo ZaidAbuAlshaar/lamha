@@ -1,0 +1,182 @@
+{
+  "label": "Simulated (TTS voices, not patients)",
+  "files": [
+    {
+      "case": "normal_sana",
+      "kind": "normal",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+0%",
+      "seconds": 4.61,
+      "format": "webm",
+      "file": "normal_sana.webm",
+      "bytes": 18358
+    },
+    {
+      "case": "normal_sana",
+      "kind": "normal",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+0%",
+      "seconds": 4.61,
+      "format": "m4a",
+      "file": "normal_sana.m4a",
+      "bytes": 33791
+    },
+    {
+      "case": "emergency_sana",
+      "kind": "emergency",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي وجع قوي بصدري ومش قادر أتنفس",
+      "rate": "+0%",
+      "seconds": 5.06,
+      "format": "webm",
+      "file": "emergency_sana.webm",
+      "bytes": 20361
+    },
+    {
+      "case": "emergency_sana",
+      "kind": "emergency",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي وجع قوي بصدري ومش قادر أتنفس",
+      "rate": "+0%",
+      "seconds": 5.06,
+      "format": "m4a",
+      "file": "emergency_sana.m4a",
+      "bytes": 37603
+    },
+    {
+      "case": "unclear_sana",
+      "kind": "unclear",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+70%",
+      "snr_db": 0,
+      "seconds": 2.74,
+      "format": "webm",
+      "file": "unclear_sana.webm",
+      "bytes": 11600
+    },
+    {
+      "case": "unclear_sana",
+      "kind": "unclear",
+      "voice": "ar-JO-SanaNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+70%",
+      "snr_db": 0,
+      "seconds": 2.74,
+      "format": "m4a",
+      "file": "unclear_sana.m4a",
+      "bytes": 23578
+    },
+    {
+      "case": "normal_taim",
+      "kind": "normal",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+0%",
+      "seconds": 4.06,
+      "format": "webm",
+      "file": "normal_taim.webm",
+      "bytes": 16126
+    },
+    {
+      "case": "normal_taim",
+      "kind": "normal",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+0%",
+      "seconds": 4.06,
+      "format": "m4a",
+      "file": "normal_taim.m4a",
+      "bytes": 30110
+    },
+    {
+      "case": "emergency_taim",
+      "kind": "emergency",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي وجع قوي بصدري ومش قادر أتنفس",
+      "rate": "+0%",
+      "seconds": 4.37,
+      "format": "webm",
+      "file": "emergency_taim.webm",
+      "bytes": 17559
+    },
+    {
+      "case": "emergency_taim",
+      "kind": "emergency",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي وجع قوي بصدري ومش قادر أتنفس",
+      "rate": "+0%",
+      "seconds": 4.37,
+      "format": "m4a",
+      "file": "emergency_taim.m4a",
+      "bytes": 32113
+    },
+    {
+      "case": "unclear_taim",
+      "kind": "unclear",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+70%",
+      "snr_db": 0,
+      "seconds": 2.4,
+      "format": "webm",
+      "file": "unclear_taim.webm",
+      "bytes": 10064
+    },
+    {
+      "case": "unclear_taim",
+      "kind": "unclear",
+      "voice": "ar-JO-TaimNeural",
+      "text": "عندي كحة خفيفة من يومين وشوية سخونة",
+      "rate": "+70%",
+      "snr_db": 0,
+      "seconds": 2.4,
+      "format": "m4a",
+      "file": "unclear_taim.m4a",
+      "bytes": 20773
+    },
+    {
+      "case": "silence",
+      "kind": "silence",
+      "voice": null,
+      "text": "",
+      "seconds": 3.0,
+      "format": "webm",
+      "file": "silence.webm",
+      "bytes": 1910
+    },
+    {
+      "case": "silence",
+      "kind": "silence",
+      "voice": null,
+      "text": "",
+      "seconds": 3.0,
+      "format": "m4a",
+      "file": "silence.m4a",
+      "bytes": 1869
+    },
+    {
+      "case": "short",
+      "kind": "short",
+      "voice": "ar-JO-SanaNeural",
+      "text": "(first 0.4 s of normal phrase)",
+      "seconds": 0.4,
+      "format": "webm",
+      "file": "short.webm",
+      "bytes": 2378
+    },
+    {
+      "case": "short",
+      "kind": "short",
+      "voice": "ar-JO-SanaNeural",
+      "text": "(first 0.4 s of normal phrase)",
+      "seconds": 0.4,
+      "format": "m4a",
+      "file": "short.m4a",
+      "bytes": 4532
+    }
+  ],
+  "errors": []
+}

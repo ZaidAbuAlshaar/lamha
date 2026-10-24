@@ -118,7 +118,8 @@ export const api = {
     fd.append('audio', blob, `voice.${ext}`);
     return fetch('/api/transcribe', { method: 'POST', body: fd }).then(j<{ text: string; duration_s: number; processing_ms: number; model: string }>);
   },
-  checkin: (body: { patient_id: string; vitals: Vitals; transcript: string; transcript_source: Checkin['transcript_source'] }) =>
+  diagnostics: (rec: Record<string, unknown>) => fetch('/api/diagnostics', json(rec)).then(j<{ id: string }>),
+  checkin: (body: { patient_id: string; vitals: Vitals; transcript: string; transcript_source: Checkin['transcript_source']; diagnostics_id?: string | null }) =>
     fetch('/api/checkins', json(body)).then(j<Checkin>),
   feed: (since?: string) => fetch(`/api/checkins?limit=20${since ? `&since=${encodeURIComponent(since)}` : ''}`).then(j<Checkin[]>),
   review: (id: string, body: { decision: 'confirm' | 'override'; final_level: Level; note: string }) =>

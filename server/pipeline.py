@@ -113,6 +113,11 @@ def analyze(patient: dict, vitals: dict, transcript: str, transcript_source: str
     if not reasons_ar:
         reasons_ar.append("لا توجد علامات خطر والقراءات ضمن المعدل")
         reasons_en.append("No red flags; readings within range")
+    ai_failed = llm_fn is not None and bool(transcript) and not (res and res.get("ok"))
+    if ai_failed:
+        ra_, re_ = rules_only_reason((res or {}).get("error"))
+        reasons_ar.append(ra_)
+        reasons_en.append(re_)
 
     # 6b. numbers guard
     t_ar, t_en = core.template_summary(vitals, symptoms, red_flags, alerts)
@@ -146,9 +151,14 @@ def analyze(patient: dict, vitals: dict, transcript: str, transcript_source: str
               "summary_en": summary_en, "advice_ar": advice_ar, "numbers_verified": True, "latency_ms": 0,
               "error": None}
     else:
-        ai = {"ok": bool(res and res.get("ok")), "model": (res or {}).get("model") or "", "summary_ar": summary_ar,
-              "summary_en": summary_en, "advice_ar": advice_ar, "numbers_verified": numbers_verified,
-              "latency_ms": int((res or {}).get("latency_ms") or 0), "error": error}
+        ai_ok = bool(res and res.get("ok"))
+        ai = {"ok": ai_ok, "model": ((res or {}).get("model") or "") if ai_ok else "rules-only",
+              "summary_ar": summary_ar, "summary_en": summary_en, "advice_ar": advice_ar,
+              "numbers_verified": numbers_verified, "latency_ms": int((res or {}).get("latency_ms") or 0),
+              "error": error}
+        if not ai_ok:
+            ai["attempted_model"] = (res or {}).get("model") or None
+            ai["error_detail"] = (res or {}).get("error_detail") or None
 
     return {
         "id": "c-" + uuid.uuid4().hex[:10],
@@ -168,6 +178,22 @@ def analyze(patient: dict, vitals: dict, transcript: str, transcript_source: str
         "ai": ai,
         "review": None,
     }
+
+
+RULES_ONLY_AR = "النتيجة من القواعد فقط"
+RULES_ONLY_EN = "Rules-only result"
+
+
+def rules_only_reason(error: str | None) -> tuple[str, str]:
+    """Clear label for the patient/doctor when the AI part failed and only the deterministic rules decided."""
+    e = (error or "").lower()
+    if "timeout" in e:
+        return RULES_ONLY_AR + " — الموديل ما ردّ بالوقت", RULES_ONLY_EN + " — model did not respond in time"
+    if e in ("invalid_json", "invalid_schema"):
+        return RULES_ONLY_AR + " — رد الموديل مش صالح", RULES_ONLY_EN + " — model reply was invalid"
+    if e in ("unreachable", "http_error"):
+        return RULES_ONLY_AR + " — الموديل مش متاح", RULES_ONLY_EN + " — model unavailable"
+    return RULES_ONLY_AR + " — الموديل ما اشتغل", RULES_ONLY_EN + " — model failed"
 
 
 def _keys():

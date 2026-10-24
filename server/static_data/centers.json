@@ -1,0 +1,8 @@
+{
+  "note": "تجريبي — مراكز شريكة وهمية للعرض فقط. أرقام وجهات الاتصال غير حقيقية. Demo partner centers with FAKE contact details.",
+  "centers": [
+    {"id": "c-shmeisani", "name_ar": "مركز الشميساني الصحي (تجريبي)", "name_en": "Shmeisani Health Center (DEMO)", "lat": 31.9686, "lon": 35.9015, "phone": "000-DEMO-01", "demo": true},
+    {"id": "c-marka", "name_ar": "مركز ماركا الصحي (تجريبي)", "name_en": "Marka Health Center (DEMO)", "lat": 31.9886, "lon": 35.9876, "phone": "000-DEMO-02", "demo": true},
+    {"id": "c-sweileh", "name_ar": "مركز صويلح الصحي (تجريبي)", "name_en": "Sweileh Health Center (DEMO)", "lat": 32.0222, "lon": 35.8411, "phone": "000-DEMO-03", "demo": true}
+  ]
+}

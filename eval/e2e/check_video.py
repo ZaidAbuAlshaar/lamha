@@ -11,6 +11,13 @@ limited), then
   2. RR: vertical shift of the row-profile per frame (cross-correlation with
      parabolic sub-pixel peak) -> FFT peak in 0.1-0.7 Hz  (pass: within +-2 rpm)
 Exit code 1 if any check fails. SYNTHETIC bench check only.
+
+Hard clips (sidecar "hard_conditions", see make_video.py --dim/--ae-steps/--motion/
+--fps-var/--backlight/--small-face): the skin mask is moved with the KNOWN per-frame
+head transform (oracle tracking), RR is measured on the row shift minus the known
+head translation, and the HR gate is POS only (POS normalises per window, so it is
+gain-step invariant; plain green is reported but not gated). RR is not gated for
+--motion clips (rotation leaks into the row profile).
 """
 import json
 import sys
@@ -110,13 +117,23 @@ def check(path):
     N = len(frames)
     base, ell = mv.build_base((W, H), side.get("portrait_scale", 0.9))
     mask = mv.skin_mask(base, ell)
-    core = cv2.erode((mask > 0.5).astype(np.uint8), np.ones((15, 15), np.uint8)).astype(bool)
+    core_u8 = cv2.erode((mask > 0.5).astype(np.uint8), np.ones((15, 15), np.uint8))
+    core = core_u8.astype(bool)
+    hard = side.get("hard_conditions") or {}
+    src = hard.get("fps_var", {}).get("source_index_per_output_frame") or list(range(N))
+    mot = hard.get("motion")
 
     rgb = np.zeros((N, 3))
     Ys = []
     for i, fr in enumerate(frames):
         bgr = cv2.cvtColor(fr, cv2.COLOR_YUV2BGR_I420)
-        px = bgr[core]
+        if mot:
+            n = src[min(i, len(src) - 1)]
+            M = mv.frame_affine(mot["centre_px"][0], mot["centre_px"][1], mot["tx_px"][n], mot["ty_px"][n], mot["rot_deg"][n])
+            cm = cv2.warpAffine(core_u8, M, (W, H), flags=cv2.INTER_NEAREST, borderValue=0).astype(bool)
+            px = bgr[cm]
+        else:
+            px = bgr[core]
         rgb[i] = px.mean(axis=0)[::-1]  # RGB
         Ys.append(fr[:H])
     # HR
@@ -126,6 +143,8 @@ def check(path):
     f_p, snr_p = peak_freq(ppos, fps, 0.7, 3.0)
     # RR
     sh = row_shift_series(Ys)
+    if mot:
+        sh = sh - np.array([mot["ty_px"][src[min(i, len(src) - 1)]] for i in range(N)])
     sh_bp = bandpass_fft(sh, fps, 0.1, 0.7)
     f_r, snr_r = peak_freq(sh_bp, fps, 0.1, 0.7)
     # amplitude of the recovered breathing sinusoid at the true rpm (least squares)
@@ -145,23 +164,27 @@ def check(path):
     row["hr_green_err"] = row["hr_green"] - side["bpm"]
     row["hr_pos_err"] = row["hr_pos"] - side["bpm"]
     row["rr_err"] = row["rr_rowshift"] - side["rpm"]
-    row["pass"] = abs(row["hr_green_err"]) <= 2 and abs(row["hr_pos_err"]) <= 2 and abs(row["rr_err"]) <= 2
+    row["hard"] = ",".join(sorted(hard)) or "-"
+    if hard:
+        row["pass"] = abs(row["hr_pos_err"]) <= 2 and (bool(mot) or abs(row["rr_err"]) <= 2)
+    else:
+        row["pass"] = abs(row["hr_green_err"]) <= 2 and abs(row["hr_pos_err"]) <= 2 and abs(row["rr_err"]) <= 2
     return row
 
 
 def main():
     vids = sys.argv[1:] or [r"E:\nazra-e2e\face_72bpm_15rpm.y4m", r"E:\nazra-e2e\face_96bpm_20rpm.y4m"]
     rows = [check(v) for v in vids]
-    hdr = f"{'video':26} {'truth':>11} {'GREEN bpm':>10} {'err':>6} {'POS bpm':>9} {'err':>6} {'rowshift rpm':>13} {'err':>6} {'amp px':>7} {'result':>7}"
+    hdr = f"{'video':30} {'truth':>11} {'GREEN bpm':>10} {'err':>6} {'POS bpm':>9} {'err':>6} {'rowshift rpm':>13} {'err':>6} {'amp px':>7} {'result':>7}  hard"
     print(hdr)
     print("-" * len(hdr))
     for r in rows:
         truth = f"{r['truth_bpm']:.0f}/{r['truth_rpm']:.0f}"
-        print(f"{r['video']:26} {truth:>11} {r['hr_green']:10.2f} {r['hr_green_err']:+6.2f} {r['hr_pos']:9.2f} {r['hr_pos_err']:+6.2f} "
-              f"{r['rr_rowshift']:13.2f} {r['rr_err']:+6.2f} {r['shift_amp_px']:7.2f} {'PASS' if r['pass'] else 'FAIL':>7}")
+        print(f"{r['video']:30} {truth:>11} {r['hr_green']:10.2f} {r['hr_green_err']:+6.2f} {r['hr_pos']:9.2f} {r['hr_pos_err']:+6.2f} "
+              f"{r['rr_rowshift']:13.2f} {r['rr_err']:+6.2f} {r['shift_amp_px']:7.2f} {'PASS' if r['pass'] else 'FAIL':>7}  {r['hard']}")
     print()
     for r in rows:
-        print(f"{r['video']:26} skin-mean green band-passed p-p {r['ac_green']:.3f} levels | spectral peak/median: green {r['snr_green']:.0f}, POS {r['snr_pos']:.0f}, rowshift {r['snr_rr']:.0f}")
+        print(f"{r['video']:30} skin-mean green band-passed p-p {r['ac_green']:.3f} levels | spectral peak/median: green {r['snr_green']:.0f}, POS {r['snr_pos']:.0f}, rowshift {r['snr_rr']:.0f}")
     print("\ntruth = nominal bpm/rpm (realised mean HR incl. drift: " + ", ".join(f"{r['truth_bpm_realised']:.2f}" for r in rows) + " bpm)")
     print("SYNTHETIC bench check: validates the video as a test input, not clinical accuracy.")
     sys.exit(0 if all(r["pass"] for r in rows) else 1)

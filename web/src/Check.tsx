@@ -2,6 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import { api, LEVEL, type Checkin, type Patient, type Vitals } from './api';
 import { Brand, Conf, confLabel, STRESS_AR, Wave } from './components';
 import { VitalsEngine, loadLandmarker, type LiveUpdate, type VitalsResult } from './vitals/engine';
+import DebugOverlay from './DebugOverlay';
+import { flagSummary, getFlags, isDebug } from './config';
+import { REASON_AR } from './vitals/diag';
+
+export type ScanResult = VitalsResult & { diagnostics_id?: string | null };
+
+/** Send the numbers-only diagnostics for every scan (also failed ones). Never blocks the patient. */
+async function logScan(r: VitalsResult, attempt: number): Promise<string | null> {
+  const flags = getFlags();
+  if (!flags.diagnostics || !r.diagnostics) return null;
+  try {
+    const { bvp_preview: _b, diagnostics, ...vitals } = r;
+    const res = await api.diagnostics({ kind: 'scan', attempt, flags: flagSummary(flags), page: window.location.hash.split('?')[0], vitals, ...diagnostics });
+    return res.id;
+  } catch {
+    return null;
+  }
+}
 
 type Step = 'home' | 'who' | 'consent' | 'scan' | 'vitals' | 'voice' | 'sending' | 'result';
 const ORDER: Step[] = ['who', 'consent', 'scan', 'vitals', 'voice', 'result'];
@@ -26,9 +44,10 @@ export default function Check() {
     setStep('sending');
     setSendErr('');
     const ref = parseFloat(refHr);
-    const v: Vitals = { ...vitals, ref_hr_bpm: Number.isFinite(ref) && ref > 30 && ref < 220 ? ref : null };
+    const { diagnostics: _d, diagnostics_id, ...rest } = vitals as ScanResult;
+    const v: Vitals = { ...rest, ref_hr_bpm: Number.isFinite(ref) && ref > 30 && ref < 220 ? ref : null };
     try {
-      setCheckin(await api.checkin({ patient_id: patient.id, vitals: v, transcript, transcript_source: source }));
+      setCheckin(await api.checkin({ patient_id: patient.id, vitals: v, transcript, transcript_source: source, diagnostics_id }));
       setStep('result');
     } catch (e) {
       setSendErr(e instanceof Error ? e.message : String(e));
@@ -178,22 +197,31 @@ const GUIDE: Record<string, string> = {
   ok: 'ممتاز… خليك ثابت وتنفّس طبيعي',
 };
 
-export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDone: (v: VitalsResult) => void; onLive?: (u: LiveUpdate) => void }) {
+let scanAttempt = 0;
+
+export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDone: (v: ScanResult) => void; onLive?: (u: LiveUpdate) => void }) {
+  const debug = isDebug();
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [u, setU] = useState<LiveUpdate | null>(null);
   const done = useRef(false);
   useEffect(() => {
     done.current = false;
+    const attempt = ++scanAttempt;
     const eng = new VitalsEngine(video.current!, canvas.current!, seconds, (up) => {
       setU(up);
       onLive?.(up);
       if (up.phase === 'analyzing' && !done.current) {
         done.current = true;
         // let the "analyzing" frame paint before the heavy pass
-        setTimeout(() => { const r = eng.result(); eng.stop(); onDone(r); }, 30);
+        setTimeout(async () => {
+          const r: ScanResult = eng.result();
+          eng.stop();
+          r.diagnostics_id = await logScan(r, attempt);
+          onDone(r);
+        }, 30);
       }
-    });
+    }, { debug });
     eng.start().catch(() => undefined);
     // Keep the screen awake: iOS Low Power Mode auto-locks after 30 s, which would freeze the scan.
     let lock: { release: () => Promise<void> } | null = null;
@@ -229,6 +257,7 @@ export function CameraScan({ seconds, onDone, onLive }: { seconds: number; onDon
       </div>
       <div className="conf" style={{ height: 6 }}><i style={{ width: `${(u?.progress ?? 0) * 100}%`, background: 'var(--hr)', transition: 'width .3s linear' }} /></div>
       <Wave data={u?.wave ?? []} />
+      {debug && <DebugOverlay d={u?.debug} />}
       {u?.phase === 'error' && (
         <div className="err">ما قدرنا نفتح الكاميرا ({u.error}). تأكد إنك سمحت للمتصفح يستخدم الكاميرا وإن الرابط https.</div>
       )}
@@ -253,7 +282,14 @@ function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; 
         <h2>قراءتك</h2>
         <span className="chip"><span className="dot" style={{ color: v.quality === 'good' ? 'var(--hr)' : v.quality === 'fair' ? 'var(--apt)' : 'var(--emg)' }} />جودة الإشارة: {v.quality === 'good' ? 'جيدة' : v.quality === 'fair' ? 'مقبولة' : 'ضعيفة'}</span>
       </div>
-      {poor && <div className="err">الإشارة ضعيفة (ضو أو حركة). الأفضل تعيد الفحص قدّام ضو أقوى وأنت ثابت.</div>}
+      {poor && (
+        <div className="err">
+          ما قدرنا نقيس بدقة. السبب على الأغلب:
+          <ul style={{ margin: '6px 0 0', paddingInlineStart: 20 }}>
+            {(v.quality_reasons?.length ? v.quality_reasons : ['low_snr']).slice(0, 3).map((r) => <li key={r}>{REASON_AR[r] ?? r}</li>)}
+          </ul>
+        </div>
+      )}
       <div className="vgrid">
         <div className="vtile wide">
           <div className="lbl"><span>نبض القلب</span><span>{confLabel(v.hr_confidence)}</span></div>

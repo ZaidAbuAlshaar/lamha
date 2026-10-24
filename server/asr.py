@@ -40,18 +40,34 @@ def _snapshot() -> str:
     return snaps[-1] if snaps else "large-v3"
 
 
+def candidates(pref: str | None = None) -> list[tuple[str, str]]:
+    """NAZRA_ASR_DEVICE=auto (GPU then CPU fallback) | cuda | cpu."""
+    pref = (pref if pref is not None else os.environ.get("NAZRA_ASR_DEVICE", "auto")).strip().lower()
+    both = [("cuda", "int8_float16"), ("cpu", "int8")]
+    if pref == "cuda":
+        return both[:1]
+    if pref == "cpu":
+        return both[1:]
+    return both
+
+
+warmup_ms: int | None = None
+
+
 def load():
-    global _model
+    global _model, warmup_ms
     from faster_whisper import WhisperModel
     path = _snapshot()
     errors = []
-    for device, ct in (("cuda", "int8_float16"), ("cpu", "int8")):
+    for device, ct in candidates():
         try:
             m = WhisperModel(path, device=device, compute_type=ct, local_files_only=True)
             # Warm-up decode: a GPU library problem (e.g. missing cuBLAS) only shows up here, not at load.
             import numpy as np
             noise = (np.random.default_rng(0).standard_normal(16000) * 0.01).astype("float32")
+            t0 = time.perf_counter()
             list(m.transcribe(noise, language="ar", vad_filter=False, beam_size=1)[0])
+            warmup_ms = int((time.perf_counter() - t0) * 1000)
             _model = m
             state.update(ready=True, device=device, compute_type=ct,
                          error=("; ".join(errors) + " -> fell back to CPU") if errors else None)

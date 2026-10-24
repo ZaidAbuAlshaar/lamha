@@ -27,6 +27,7 @@ def con() -> sqlite3.Connection:
         _con.execute("CREATE TABLE IF NOT EXISTS patients (id TEXT PRIMARY KEY, created_at TEXT, doc TEXT)")
         _con.execute("CREATE TABLE IF NOT EXISTS checkins (id TEXT PRIMARY KEY, patient_id TEXT, ts REAL, doc TEXT)")
         _con.execute("CREATE INDEX IF NOT EXISTS ix_ck_p ON checkins(patient_id, ts)")
+        _con.execute("CREATE TABLE IF NOT EXISTS diagnostics (id TEXT PRIMARY KEY, ts REAL, checkin_id TEXT, doc TEXT)")
         _con.commit()
     return _con
 
@@ -82,6 +83,47 @@ def recent_checkins(since_ts: float | None, limit: int) -> list[dict]:
             rows = con().execute("SELECT doc FROM checkins WHERE ts > ? ORDER BY ts DESC LIMIT ?",
                                  (since_ts, limit)).fetchall()
     return [json.loads(r[0]) for r in rows]
+
+
+def put_diagnostics(d: dict):
+    with _lock:
+        con().execute("INSERT OR REPLACE INTO diagnostics VALUES (?,?,?,?)",
+                      (d["id"], d["ts"], d.get("checkin_id"), json.dumps(d, ensure_ascii=False)))
+        con().commit()
+
+
+def link_diagnostics(diag_id: str, checkin_id: str):
+    with _lock:
+        r = con().execute("SELECT doc FROM diagnostics WHERE id=?", (diag_id,)).fetchone()
+        if not r:
+            return
+        d = json.loads(r[0])
+        d["checkin_id"] = checkin_id
+        con().execute("UPDATE diagnostics SET checkin_id=?, doc=? WHERE id=?", (checkin_id, json.dumps(d, ensure_ascii=False), diag_id))
+        con().commit()
+
+
+def latest_diagnostics(n: int) -> list[dict]:
+    with _lock:
+        rows = con().execute("SELECT doc FROM diagnostics ORDER BY ts DESC LIMIT ?", (n,)).fetchall()
+    return [json.loads(r[0]) for r in rows]
+
+
+def counts() -> dict:
+    with _lock:
+        c = con()
+        c.execute("SELECT 1").fetchone()
+        return {t: c.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("patients", "checkins", "diagnostics")}
+
+
+def delete_patient(pid: str) -> int:
+    """Remove a patient and its check-ins/diagnostics links (used by test clean-up). Returns check-ins removed."""
+    with _lock:
+        c = con()
+        n = c.execute("DELETE FROM checkins WHERE patient_id=?", (pid,)).rowcount
+        c.execute("DELETE FROM patients WHERE id=?", (pid,))
+        c.commit()
+    return n
 
 
 def all_checkins() -> list[dict]:
