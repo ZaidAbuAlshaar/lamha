@@ -71,8 +71,7 @@
     max-width: none; padding: 0; color: var(--text); background: var(--bg);
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
-  html, body, #root { height: auto !important; background: var(--bg, #fff) !important; }
-  body { background: #fff !important; }
+  html, body, #root { height: auto !important; background: #fff !important; }
   .no-print, .rep .topbar .step-dots { display: none !important; }
   .rep .screen { animation: none; }
   .rep-card, .rep-level, .rep-vital { break-inside: avoid; page-break-inside: avoid; }
