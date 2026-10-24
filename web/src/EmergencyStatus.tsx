@@ -31,7 +31,7 @@ export interface AlertDoc {
 
 const hhmm = (iso: string) => {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('ar-JO', { hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('ar-JO-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
 };
 
 const ESCALATED = ['', '', 'ما ردّ المركز الأول — حوّلنا لمركز ثاني', 'ما ردّ المركز الثاني — حوّلنا لمركز ثالث'];

@@ -67,7 +67,12 @@ function beep(ac: AudioContext, freq: number, dur: number) {
 // ---------------------------------------------------------------- console
 export default function Center() {
   const [centers, setCenters] = useState<CenterInfo[]>(DEMO_CENTERS);
-  const id = centerIdFromHash();
+  const [id, setId] = useState(centerIdFromHash());
+  useEffect(() => {
+    const on = () => setId(centerIdFromHash()); // App only re-renders on route change, not on ?id=
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
   useEffect(() => {
     fetch('/api/centers').then((r) => (r.ok ? r.json() : Promise.reject())).then(setCenters).catch(() => undefined);
   }, []);
