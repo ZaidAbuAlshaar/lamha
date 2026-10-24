@@ -25,6 +25,7 @@ import health  # noqa: E402
 import llm  # noqa: E402
 import pipeline  # noqa: E402
 import store  # noqa: E402
+import alerts, alerts_api  # noqa: E402,E401  v2 center alerts
 
 VERSION = "0.1.0"
 DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
@@ -103,6 +104,7 @@ def _history(checkins_oldest_first: list[dict], days: int) -> list[dict]:
 # ---------------------------------------------------------------- API
 # v2 routers
 app.include_router(__import__("insights_api").router)  # insights
+app.include_router(alerts_api.router)
 
 
 @app.get("/api/health")
@@ -283,6 +285,8 @@ def create_checkin(body: dict = Body(...)):
     if body.get("diagnostics_id"):
         c["diagnostics_id"] = str(body["diagnostics_id"])[:20]
     store.put_checkin(c)
+    if (alert_id := alerts.on_checkin(c, p)):  # v2 center: emergency -> nearest partner center
+        c["alert_id"] = alert_id; store.put_checkin(c)  # noqa: E702
     if c.get("diagnostics_id"):
         store.link_diagnostics(c["diagnostics_id"], c["id"])
     return c

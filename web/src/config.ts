@@ -19,6 +19,7 @@ export const FLAG_DEFAULTS = {
   qualityScore: true, // composite 0–1 quality score
   diagnostics: true, // send a numbers-only diagnostics record per scan
   community: true, timeline: true, // insights: doctor community early-warning tab + patient timeline/what-changed/voice markers
+  centerAlerts: true, // emergency: show partner-center alert status (the 911 link always shows)
 };
 
 export type Flags = typeof FLAG_DEFAULTS;

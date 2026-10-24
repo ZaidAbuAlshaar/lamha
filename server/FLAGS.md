@@ -50,3 +50,18 @@ multipart: `video` (file) + `meta` (JSON string): `ref_hr_bpm` (number 20–250)
 - `GET /api/patients/{id}/voice` → `{enabled, available, n_prior, current, baseline, delta_pct, quality_ok, reason_ar, label_ar}`.
 - `POST /api/checkins` keeps `voice_markers` and `context` (top-level body or inside `vitals`) on `vitals` (numbers/short strings only).
 - Demo cohort for the community tab lives in its own tables (`community_patients`, `community_checkins`) so it stays out of the triage queue and the patient picker.
+## Partner-center alerts (v2 center workstream)
+
+| Flag | Default | What it does |
+|---|---|---|
+| `NAZRA_ALERTS` | `1` | `0` = never create partner-center alerts (endpoints still answer). Alerts are created only when the deterministic triage level is `emergency` and the patient's `consent.share_emergency` is not `false` (missing = true). No model is involved. |
+| `NAZRA_ALERT_TIMEOUT_S` | `180` (`30` when `NAZRA_DEMO=1`) | Seconds without an ack before the alert moves to the next nearest center. Max 3 centers, then `status="failed"`. |
+| `NAZRA_DEMO` | unset | `1` = demo timings (alert timeout 30 s). |
+
+Dedup: one alert per patient per 30 min unless the new check-in has a red-flag code the previous alert lacked.
+Routes: `GET /api/centers`, `GET /api/alerts?center_id=`, `GET /api/alerts/{id}`, `POST /api/alerts/{id}/ack {center_id}`,
+`POST /api/patients/{id}/consent {share_emergency, notify_family, receive_report}`, WebSocket `/ws/center/{center_id}`
+(server → `{"type":"hello",alerts}`, `{"type":"alert",alert}`, `{"type":"update",alert}`; client → `{"type":"ack","alert_id"}`).
+`alerts.health()` → open alerts + connected WebSocket clients per center.
+**uvicorn needs the `websockets` (or `wsproto`) package for the WebSocket route**; without it the console falls back to REST polling every 2 s.
+Escalation runs in a daemon thread (1 s tick) started on the first alert / alerts request.

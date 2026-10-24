@@ -6,6 +6,7 @@ import DebugOverlay from './DebugOverlay';
 import { flagSummary, getFlags, isDebug, scanMode } from './config';
 import { HardenedEngine, type GateCode, type HardLiveUpdate } from './vitals/engine2';
 import { REASON_AR } from './vitals/diag';
+import EmergencyStatus from './EmergencyStatus'; // v2 center
 
 export type ScanResult = VitalsResult & { diagnostics_id?: string | null };
 
@@ -74,7 +75,7 @@ export default function Check() {
       </div>
       {step === 'home' && <Home onStart={() => setStep('who')} />}
       {step === 'who' && <Who onPick={(p) => { setPatient(p); setStep('consent'); }} />}
-      {step === 'consent' && <Consent onOk={() => setStep('scan')} />}
+      {step === 'consent' && <Consent pid={patient?.id} onOk={() => setStep('scan')} />}
       {step === 'scan' && <Scan seconds={SCAN_SECONDS} mode={mode} onDone={(v) => { setVitals(v); if (v.quality === 'poor') setPoorCount((c) => c + 1); setStep('vitals'); }} />}
       {step === 'vitals' && vitals && (
         <VitalsView v={vitals} refHr={refHr} setRefHr={setRefHr} onRetry={() => setStep('scan')} onNext={() => setStep('voice')}
@@ -173,8 +174,11 @@ function Who({ onPick }: { onPick: (p: Patient) => void }) {
   );
 }
 
-function Consent({ onOk }: { onOk: () => void }) {
+function Consent({ onOk, pid }: { onOk: () => void; pid?: string }) {
   const [ok, setOk] = useState(false);
+  const [share, setShare] = useState({ share_emergency: true, notify_family: false, receive_report: false }); // v2 center
+  const SHARE = [['share_emergency', 'مشاركة حالتي مع أقرب مركز بالطوارئ'], ['notify_family', 'تنبيه شخص من عيلتي'], ['receive_report', 'إرسال التقرير على موبايلي']] as const;
+  const go = () => { if (pid) fetch(`/api/patients/${pid}/consent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(share) }).catch(() => undefined); onOk(); };
   return (
     <div className="screen">
       <h2>قبل ما نبلّش — خصوصيتك</h2>
@@ -190,8 +194,11 @@ function Consent({ onOk }: { onOk: () => void }) {
         <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />
         <span>فهمت وبوافق على الفحص ومشاركة الأرقام والملخص مع طبيبي.</span>
       </label>
+      {SHARE.map(([k, label]) => (
+        <label key={k} className="check"><input type="checkbox" checked={share[k]} onChange={(e) => setShare({ ...share, [k]: e.target.checked })} /><span>{label}</span></label>
+      ))}
       <div className="spacer" />
-      <button className="btn primary block" disabled={!ok} onClick={onOk}>افتح الكاميرا</button>
+      <button className="btn primary block" disabled={!ok} onClick={go}>افتح الكاميرا</button>
     </div>
   );
 }
@@ -531,12 +538,12 @@ function Result({ c, onAgain }: { c: Checkin; onAgain: () => void }) {
   const v = c.vitals;
   return (
     <div className="screen">
+      {c.triage.level === 'emergency' && <EmergencyStatus alertId={c.alert_id} />}
       <div className={`triage ${L.cls}`}>
         <span className="muted" style={{ fontSize: 13 }}>النتيجة</span>
         <span className={`big ${L.cls}`}>{L.ar}</span>
         <p style={{ fontSize: 18 }}>{c.vitals.quality === 'poor' && c.triage.level === 'followup' ? 'ما قدرنا نقيس بدقة هالمرة — أعد الفحص بضو أقوى' : L.patient}</p>
         {c.ai.advice_ar && <p className="muted">{c.ai.advice_ar}</p>}
-        {c.triage.level === 'emergency' && <a className="btn danger block" href="tel:911" style={{ textDecoration: 'none', marginTop: 6 }}>اتصل 911</a>}
       </div>
       {c.trend_alerts.length > 0 && (
         <div className="card stack">
