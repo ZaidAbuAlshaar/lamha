@@ -23,6 +23,7 @@ import asr  # noqa: E402
 import core  # noqa: E402
 import health  # noqa: E402
 import llm  # noqa: E402
+import llm_cloud  # noqa: E402  (OpenRouter fallback for the local Gemma; key from gitignored .env)
 import pipeline  # noqa: E402
 import store  # noqa: E402
 import alerts, alerts_api  # noqa: E402,E401  v2 center alerts
@@ -65,6 +66,13 @@ def _load_models():
     asr.load()
     if asr.state["ready"] and asr.warmup_ms is not None:
         health.record("whisper", asr.warmup_ms, True, warmup=True)
+    if os.environ.get("NAZRA_WARMUP", "1") != "0":
+        import importlib
+        for mod in ("forecast", "tts"):  # v2: Chronos worker + Piper voice, so the first demo request isn't slow
+            try:
+                importlib.import_module(mod).warm()
+            except Exception as e:
+                boot[f"{mod}_warm_error"] = f"{type(e).__name__}: {e}"[:200]
 
 
 @asynccontextmanager
@@ -128,7 +136,7 @@ def health_route():
     }
     # v2 components: each feature module exposes health(); a missing or failing module reports "down" instead of breaking /api/health.
     import importlib
-    for key, mod in (("websocket_alerts", "alerts"), ("chronos", "forecast"), ("piper_tts", "tts")):
+    for key, mod in (("websocket_alerts", "alerts"), ("chronos", "forecast"), ("piper_tts", "tts"), ("cloud_llm_fallback", "llm_cloud")):
         try:
             components[key] = importlib.import_module(mod).health()
         except ModuleNotFoundError:
@@ -289,7 +297,7 @@ def create_checkin(body: dict = Body(...)):
     prev = store.patient_checkins(p["id"], newest_first=False)
     c = pipeline.analyze(p, body.get("vitals") or {}, body.get("transcript") or "",
                          body.get("transcript_source") or "", prev,
-                         llm_fn=health.guarded_llm(llm.extract, LLM_TIMEOUT_S), simulated=False)
+                         llm_fn=llm_cloud.with_fallback(health.guarded_llm(llm.extract, LLM_TIMEOUT_S)), simulated=False)
     for k in ("voice_markers", "context"):  # insights: keep client voice markers/context (pipeline drops unknown vitals keys)
         if isinstance(body.get(k) or (body.get("vitals") or {}).get(k), dict):
             c["vitals"][k] = _numbers_only(body.get(k) or body["vitals"][k])
