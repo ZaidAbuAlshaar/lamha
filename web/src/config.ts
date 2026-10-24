@@ -18,6 +18,7 @@ export const FLAG_DEFAULTS = {
   fingertip: true, // offer rear-camera + torch fingertip mode after 2 failed scans
   qualityScore: true, // composite 0–1 quality score
   diagnostics: true, // send a numbers-only diagnostics record per scan
+  community: true, timeline: true, // insights: doctor community early-warning tab + patient timeline/what-changed/voice markers
 };
 
 export type Flags = typeof FLAG_DEFAULTS;
