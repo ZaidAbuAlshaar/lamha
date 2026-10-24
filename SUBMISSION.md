@@ -13,7 +13,7 @@ Digital Health & Wellness
 - **Live demo (patient, open on a phone):** https://illustration-map-market-template.trycloudflare.com/#/
 - **Doctor dashboard:** https://illustration-map-market-template.trycloudflare.com/#/doctor
 - **Partner-centre console:** https://illustration-map-market-template.trycloudflare.com/#/center?id=c-shmeisani
-- **Code:** https://github.com/ZaidAbuAlshaar/nazra
+- **Code:** https://github.com/ZaidAbuAlshaar/lamha
 - The live demo runs on our laptop through a Cloudflare tunnel, so the link is only up while the laptop is on.
 
 ## Description
