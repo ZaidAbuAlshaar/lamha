@@ -1,0 +1,1 @@
+{ "name": "نظرة · Nazra", "short_name": "نظرة", "start_url": "/#/", "display": "standalone", "background_color": "#060908", "theme_color": "#060908", "dir": "rtl", "lang": "ar", "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] }

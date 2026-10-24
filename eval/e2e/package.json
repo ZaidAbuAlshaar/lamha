@@ -1,0 +1,10 @@
+{
+  "name": "nazra-e2e",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Synthetic-video bench harness for the Nazra browser rPPG engine",
+  "dependencies": {
+    "puppeteer-core": "^25.16.0"
+  }
+}

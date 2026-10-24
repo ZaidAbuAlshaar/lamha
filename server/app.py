@@ -1,0 +1,223 @@
+"""Nazra clinic server (FastAPI, port 8787). Triage aid — not a diagnosis."""
+from __future__ import annotations
+
+import math
+import os
+import sys
+import tempfile
+import threading
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse  # noqa: E402
+
+import asr  # noqa: E402
+import core  # noqa: E402
+import llm  # noqa: E402
+import pipeline  # noqa: E402
+import store  # noqa: E402
+
+VERSION = "0.1.0"
+DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+boot = {"llm_preload_error": None, "unloaded": [], "started": time.time()}
+
+
+def _load_models():
+    if os.environ.get("NAZRA_NO_MODELS") == "1":
+        return
+    try:
+        boot["unloaded"] = llm.free_vram_and_preload(llm.MODEL, free=os.environ.get("NAZRA_FREE_VRAM", "1") != "0")
+    except Exception as e:
+        boot["llm_preload_error"] = f"{type(e).__name__}: {e}"[:300]
+    asr.load()
+
+
+@asynccontextmanager
+async def lifespan(app):
+    store.con()
+    store.seed_if_empty()
+    threading.Thread(target=_load_models, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="Nazra", version=VERSION, lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+# ---------------------------------------------------------------- helpers
+def _eff_level(c: dict | None) -> str | None:
+    if not c:
+        return None
+    if c.get("review") and c["review"].get("final_level") in core.LEVEL_RANK:
+        return c["review"]["final_level"]
+    return c["triage"]["level"]
+
+
+def _history(checkins_oldest_first: list[dict], days: int) -> list[dict]:
+    lo = datetime.now(core.AMMAN) - timedelta(days=days)
+    out = []
+    for c in checkins_oldest_first:
+        t = core.parse_ts(c["created_at"])
+        if t >= lo:
+            v = c["vitals"]
+            out.append({"date": t.astimezone(core.AMMAN).strftime("%Y-%m-%d"), "hr": v.get("hr_bpm"),
+                        "rr": v.get("rr_bpm"), "stress": v.get("stress_index")})
+    return out
+
+
+# ---------------------------------------------------------------- API
+@app.get("/api/health")
+def health():
+    ls = llm.status()
+    if boot["llm_preload_error"] and not ls["ready"]:
+        ls["error"] = ls["error"] or boot["llm_preload_error"]
+    return {"ok": True, "whisper": dict(asr.state), "llm": ls, "version": VERSION}
+
+
+@app.post("/api/transcribe")
+def transcribe(audio: UploadFile = File(...)):
+    if not asr.state["ready"]:
+        raise HTTPException(503, detail="Whisper model is still loading or failed to load: "
+                                        + str(asr.state.get("error") or "loading"))
+    suffix = Path(audio.filename or "a.webm").suffix or ".webm"
+    fd, path = tempfile.mkstemp(prefix="nazra_", suffix=suffix)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            while chunk := audio.file.read(1 << 20):
+                f.write(chunk)
+        try:
+            return asr.transcribe(path)
+        except Exception as e:
+            raise HTTPException(422, detail=f"could not transcribe audio: {type(e).__name__}: {e}"[:300])
+    finally:
+        try:
+            os.remove(path)  # privacy: audio is never stored
+        except OSError:
+            pass
+
+
+@app.get("/api/patients")
+def patients():
+    out = []
+    for p in store.list_patients():
+        cks = store.patient_checkins(p["id"], newest_first=False)
+        latest = cks[-1] if cks else None
+        out.append({**p, "latest": latest, "history": _history(cks, 14), "checkin_count": len(cks)})
+
+    def key(x):
+        lv = _eff_level(x["latest"])
+        rank = core.LEVEL_RANK[lv] if lv else -1
+        ts = core.parse_ts(x["latest"]["created_at"]).timestamp() if x["latest"] else 0
+        return (-rank, -ts)
+
+    out.sort(key=key)
+    return out
+
+
+@app.post("/api/patients")
+def create_patient(body: dict = Body(...)):
+    name_ar = (body.get("name_ar") or "").strip()
+    if not name_ar:
+        raise HTTPException(422, detail="name_ar is required")
+    age = body.get("age")
+    try:
+        age = int(age) if age not in (None, "") else None
+    except (TypeError, ValueError):
+        age = None
+    p = store.new_patient(name_ar, body.get("name_en"), age, body.get("sex"), body.get("location_ar"),
+                          simulated=False)
+    store.put_patient(p)
+    return p
+
+
+@app.get("/api/patients/{pid}")
+def patient_detail(pid: str):
+    p = store.get_patient(pid)
+    if not p:
+        raise HTTPException(404, detail="patient not found")
+    asc = store.patient_checkins(pid, newest_first=False)
+    baseline = None
+    if asc:
+        b = core.compute_baseline(asc[:-1], core.parse_ts(asc[-1]["created_at"]))
+        if b["n"]:
+            baseline = {"hr": b["hr"], "rr": b["rr"], "stress": b["stress"], "n": b["n"]}
+    return {"patient": p, "checkins": list(reversed(asc)), "history": _history(asc, 30), "baseline": baseline}
+
+
+@app.post("/api/checkins")
+def create_checkin(body: dict = Body(...)):
+    p = store.get_patient(body.get("patient_id") or "")
+    if not p:
+        raise HTTPException(404, detail="patient not found")
+    prev = store.patient_checkins(p["id"], newest_first=False)
+    c = pipeline.analyze(p, body.get("vitals") or {}, body.get("transcript") or "",
+                         body.get("transcript_source") or "", prev, llm_fn=llm.extract, simulated=False)
+    store.put_checkin(c)
+    return c
+
+
+@app.get("/api/checkins")
+def list_checkins(since: str | None = None, limit: int = 50):
+    ts = None
+    if since:
+        try:
+            ts = core.parse_ts(since).timestamp()
+        except ValueError:
+            raise HTTPException(422, detail="since must be ISO-8601")
+    return store.recent_checkins(ts, max(1, min(int(limit), 500)))
+
+
+@app.post("/api/checkins/{cid}/review")
+def review(cid: str, body: dict = Body(...)):
+    c = store.get_checkin(cid)
+    if not c:
+        raise HTTPException(404, detail="checkin not found")
+    decision = body.get("decision")
+    if decision not in ("confirm", "override"):
+        raise HTTPException(422, detail="decision must be confirm|override")
+    final = body.get("final_level") or c["triage"]["level"]
+    if final not in core.LEVEL_RANK:
+        raise HTTPException(422, detail="final_level must be emergency|appointment|followup")
+    if decision == "confirm":
+        final = c["triage"]["level"]
+    c["review"] = {"decision": decision, "final_level": final, "note": str(body.get("note") or ""),
+                   "reviewed_at": datetime.now(core.AMMAN).isoformat(timespec="seconds")}
+    store.put_checkin(c)
+    return c
+
+
+@app.get("/api/validation")
+def validation():
+    pairs = []
+    for c in store.all_checkins():
+        v = c.get("vitals") or {}
+        if c.get("simulated") or v.get("hr_bpm") is None or v.get("ref_hr_bpm") is None:
+            continue
+        pairs.append({"checkin_id": c["id"], "patient_id": c["patient_id"], "rppg": float(v["hr_bpm"]),
+                      "ref": float(v["ref_hr_bpm"]), "quality": v.get("quality"), "created_at": c["created_at"]})
+    n = len(pairs)
+    if not n:
+        return {"n": 0, "mae_bpm": None, "rmse_bpm": None, "within_5_pct": None, "pairs": []}
+    errs = [p["rppg"] - p["ref"] for p in pairs]
+    return {"n": n, "mae_bpm": round(sum(abs(e) for e in errs) / n, 2),
+            "rmse_bpm": round(math.sqrt(sum(e * e for e in errs) / n), 2),
+            "within_5_pct": round(100.0 * sum(1 for e in errs if abs(e) <= 5) / n, 1), "pairs": pairs}
+
+
+# ---------------------------------------------------------------- SPA (registered last)
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa(full_path: str):
+    if full_path.startswith("api/") or full_path == "api":
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    if not (DIST / "index.html").exists():
+        return JSONResponse({"detail": "frontend not built (nazra/web/dist missing)"}, status_code=404)
+    f = (DIST / full_path).resolve()
+    if full_path and f.is_file() and DIST.resolve() in f.parents:
+        return FileResponse(str(f))
+    return FileResponse(str(DIST / "index.html"))
