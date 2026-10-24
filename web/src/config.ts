@@ -18,6 +18,10 @@ export const FLAG_DEFAULTS = {
   fingertip: true, // offer rear-camera + torch fingertip mode after 2 failed scans
   qualityScore: true, // composite 0–1 quality score
   diagnostics: true, // send a numbers-only diagnostics record per scan
+  contextQuestions: true, // v2 protocol: one-tap context questions (exercise / caffeine / sleep / meds) before the scan
+  twoReadings: true, // v2 protocol: two 30 s readings (a third if they differ > 5 bpm); poor readings never counted
+  breathing: true, // v2 protocol: optional 15 s guided-breathing signal check (RSA); never feeds triage
+  dailyReminder: true, // v2 protocol: «ذكّرني كل يوم» button that downloads a daily .ics calendar event
 };
 
 export type Flags = typeof FLAG_DEFAULTS;

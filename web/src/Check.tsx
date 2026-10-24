@@ -5,6 +5,9 @@ import { VitalsEngine, loadLandmarker, type LiveUpdate, type VitalsResult } from
 import DebugOverlay from './DebugOverlay';
 import { flagSummary, getFlags, isDebug } from './config';
 import { REASON_AR } from './vitals/diag';
+import { ContextQuestions, MultiScan, ProtocolSummary, ReminderButton } from './protocol/ProtocolSteps';
+import { Breathing } from './protocol/BreathingCheck';
+import { contextFields, type CheckContext } from './protocol/context';
 
 export type ScanResult = VitalsResult & { diagnostics_id?: string | null };
 
@@ -21,8 +24,7 @@ async function logScan(r: VitalsResult, attempt: number): Promise<string | null>
   }
 }
 
-type Step = 'home' | 'who' | 'consent' | 'scan' | 'vitals' | 'voice' | 'sending' | 'result';
-const ORDER: Step[] = ['who', 'consent', 'scan', 'vitals', 'voice', 'result'];
+type Step = 'home' | 'who' | 'consent' | 'context' | 'scan' | 'vitals' | 'breathing' | 'voice' | 'sending' | 'result';
 const SCAN_SECONDS = 30;
 
 export default function Check() {
@@ -32,6 +34,9 @@ export default function Check() {
   const [refHr, setRefHr] = useState('');
   const [checkin, setCheckin] = useState<Checkin | null>(null);
   const [sendErr, setSendErr] = useState('');
+  const [flags] = useState(getFlags);
+  const [ctx, setCtx] = useState<CheckContext | null>(null);
+  const ORDER: Step[] = ['who', 'consent', ...(flags.contextQuestions ? ['context' as const] : []), 'scan', 'vitals', ...(flags.breathing ? ['breathing' as const] : []), 'voice', 'result'];
   const idx = ORDER.indexOf(step === 'sending' ? 'result' : step);
 
   useEffect(() => {
@@ -44,8 +49,8 @@ export default function Check() {
     setStep('sending');
     setSendErr('');
     const ref = parseFloat(refHr);
-    const { diagnostics: _d, diagnostics_id, ...rest } = vitals as ScanResult;
-    const v: Vitals = { ...rest, ref_hr_bpm: Number.isFinite(ref) && ref > 30 && ref < 220 ? ref : null };
+    const { diagnostics: _d, diagnostics_id, beat_times_s: _bt, ...rest } = vitals as ScanResult;
+    const v: Vitals = { ...rest, ref_hr_bpm: Number.isFinite(ref) && ref > 30 && ref < 220 ? ref : null, ...contextFields(ctx, rest.quality) };
     try {
       setCheckin(await api.checkin({ patient_id: patient.id, vitals: v, transcript, transcript_source: source, diagnostics_id }));
       setStep('result');
@@ -55,8 +60,8 @@ export default function Check() {
   };
 
   const restart = () => {
-    setVitals(null); setCheckin(null); setRefHr(''); setSendErr('');
-    setStep('scan');
+    setVitals(null); setCheckin(null); setRefHr(''); setSendErr(''); setCtx(null);
+    setStep(flags.contextQuestions ? 'context' : 'scan');
   };
 
   return (
@@ -71,9 +76,13 @@ export default function Check() {
       </div>
       {step === 'home' && <Home onStart={() => setStep('who')} />}
       {step === 'who' && <Who onPick={(p) => { setPatient(p); setStep('consent'); }} />}
-      {step === 'consent' && <Consent onOk={() => setStep('scan')} />}
-      {step === 'scan' && <Scan seconds={SCAN_SECONDS} onDone={(v) => { setVitals(v); setStep('vitals'); }} />}
-      {step === 'vitals' && vitals && <VitalsView v={vitals} refHr={refHr} setRefHr={setRefHr} onRetry={() => setStep('scan')} onNext={() => setStep('voice')} />}
+      {step === 'consent' && <Consent onOk={() => setStep(flags.contextQuestions ? 'context' : 'scan')} />}
+      {step === 'context' && <ContextQuestions hasConditions={!!patient?.conditions_ar.length} onDone={(c) => { setCtx(c); setStep('scan'); }} />}
+      {step === 'scan' && (flags.twoReadings
+        ? <MultiScan Scanner={CameraScan} seconds={SCAN_SECONDS} onDone={(v) => { setVitals(v); setStep('vitals'); }} />
+        : <Scan seconds={SCAN_SECONDS} onDone={(v) => { setVitals(v); setStep('vitals'); }} />)}
+      {step === 'vitals' && vitals && <VitalsView v={vitals} refHr={refHr} setRefHr={setRefHr} onRetry={() => setStep('scan')} onNext={() => setStep(flags.breathing ? 'breathing' : 'voice')} extra={<ProtocolSummary v={vitals} ctx={ctx} />} />}
+      {step === 'breathing' && <Breathing Scanner={CameraScan} onNext={() => setStep('voice')} />}
       {step === 'voice' && <Voice onSend={send} />}
       {step === 'sending' && <Sending error={sendErr} onRetry={() => setStep('voice')} />}
       {step === 'result' && checkin && <Result c={checkin} onAgain={restart} />}
@@ -274,7 +283,7 @@ function Scan({ seconds, onDone }: { seconds: number; onDone: (v: VitalsResult) 
   );
 }
 
-function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; refHr: string; setRefHr: (s: string) => void; onRetry: () => void; onNext: () => void }) {
+function VitalsView({ v, refHr, setRefHr, onRetry, onNext, extra }: { v: VitalsResult; refHr: string; setRefHr: (s: string) => void; onRetry: () => void; onNext: () => void; extra?: import('react').ReactNode }) {
   const poor = v.quality === 'poor';
   return (
     <div className="screen">
@@ -290,6 +299,7 @@ function VitalsView({ v, refHr, setRefHr, onRetry, onNext }: { v: VitalsResult; 
           </ul>
         </div>
       )}
+      {extra}
       <div className="vgrid">
         <div className="vtile wide">
           <div className="lbl"><span>نبض القلب</span><span>{confLabel(v.hr_confidence)}</span></div>
@@ -503,6 +513,7 @@ function Result({ c, onAgain }: { c: Checkin; onAgain: () => void }) {
       </div>
       <div className="card row"><span className="hr" style={{ fontSize: 20 }}>✓</span><span>وصل ملخصك للطبيب. القرار النهائي إله.</span></div>
       <button className="btn block" onClick={onAgain}>فحص جديد</button>
+      <ReminderButton />
       <p className="disclaimer">أداة فرز مش تشخيص · الموديل: {c.ai.ok ? c.ai.model : 'قواعد فقط'}</p>
     </div>
   );
